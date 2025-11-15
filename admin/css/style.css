@@ -22,3 +22,29 @@ body {
   flex: 1;
   padding: 16px;
 }
+
+.sidebar {
+  width: 220px;
+  background: #0f1724;
+  color: #fff;
+  padding: 16px;
+}
+
+.sidebar .logo {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+}
+
+.nav a {
+  display: block;
+  padding: 10px 8px;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.nav a.active {
+  background: #1e293b;
+  border-radius: 6px;
+  color: #fff;
+}

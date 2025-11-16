@@ -1,3 +1,8 @@
+:root {
+  --primary-color: #4f46e5;
+  --primary-color-hover: #4338ca;
+}
+
 body {
   margin: 0;
   font-family: Arial;
@@ -201,4 +206,35 @@ body {
 
 .status.cancelled {
   background: #dc2626; 
+}
+.quick-actions {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  padding: 10px 14px;
+  background: #fff;
+  color: #334155;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.action-btn:hover {
+  background: #f8fafc;
+}
+
+.action-btn.primary {
+  background: var(--primary-color); 
+  color: #fff;
+  border-color: var(--primary-color);
+}
+
+.action-btn.primary:hover {
+  background: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
 }

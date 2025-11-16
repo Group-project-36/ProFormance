@@ -5,6 +5,7 @@
   <title>Admin Dashboard (ProFormance)</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
+  
 <body>
   
   <div id="app">
@@ -13,6 +14,7 @@
         <div class="logo">
           <img src="assets/images/proformance-logo.png" alt="ProFormance Logo" class="logo-img">
         </div>
+      
         <nav class="nav">
             <a href="#" class="active">Dashboard</a>
             <a href="#">Orders</a>
@@ -23,7 +25,6 @@
         </nav>
       </aside>
   
-<div id="main-content-wrapper"> 
     <main class="main">
         
         <header class="topbar">
@@ -32,23 +33,48 @@
             </div>
           
             <div class="top-actions">
-                <a href="#" class="notification">Notification</a> 
+                <span class="notification"></span> 
                 <div class="avatar">A</div>
             </div>
         </header>
         
         <section class="content">
+          <div class="stats-grid">
+
+            <div class="stat-card">
+              <h3>Total Sales</h3>
+              <p class="stat-number">$12,430(Test)</p>
+            </div>
+
+            <div class="stat-card">
+              <h3>Total Orders</h3>
+              <p class="stat-number">380(Test)</p>
+            </div>
+
+             <div class="stat-card">
+                <h3>Total Customers</h3>
+                <p class="stat-number">142(test)</p>
+             </div>
+
+             <div class="stat-card">
+                <h3>Low Stock Items</h3>
+                <p class="stat-number">5(test)</p>
+             </div>
+
+          </div>
+
           <div class="card">
             <h1>Welcome to the Admin Dashboard</h1>
             <p>Main Content (Not Yet Develop)</p>
-        
-          <footer>
+          </div>
+          
+          <footer class="page-footer">
             <p>Add later (maybe use same footer for the whole website</p>
           </footer>
-        </div> </section>
+         </section>
         
       </main>
-    </div>
   
-  </div></body>
+  </div>
+</body>
 </html>

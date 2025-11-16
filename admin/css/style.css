@@ -113,3 +113,14 @@ body {
 .avatar:hover {
   opacity: 0.85;
 }
+
+.content {
+    padding: 24px;
+}
+
+.card {
+    background-color: #ffffff; 
+    border-radius: 8px; 
+    padding: 20px; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}

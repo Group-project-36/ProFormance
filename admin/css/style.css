@@ -236,3 +236,98 @@ body {
   background: var(--primary-color-hover);
   border-color: var(--primary-color-hover);
 }
+
+
+/* Customer Management Page CSS*/
+.controls-bar {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input input {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  width: 250px; 
+  outline: none;
+}
+
+.search-input input:focus {
+  border-color: var(--primary-color);
+}
+
+.search-btn {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.search-btn:hover {
+  background: var(--primary-color-hover);
+}
+
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.table-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.table-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table-container th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-container td {
+  padding: 12px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.table-container tr:last-child td {
+  border-bottom: none;
+}
+
+.table-container tr:hover {
+  background-color: #f8fafc;
+}
+
+.status.delivered {
+  background: #16a34a; 
+  color: white;
+}

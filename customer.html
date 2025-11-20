@@ -20,7 +20,7 @@
         <nav class="nav">
           <div class=""nav-section">
               <h3>Main Menu</h3>
-              <a href="index.html"><i class="fas fa-border-all"></i> Overview</a>
+              <a href="index.html"id="nav-overview"><i class="fas fa-border-all"></i> Overview</a>
               <a href="#"><i class="fas fa-chart-column"></i> Analytics</a>
               <a href="#"><i class="fas fa-dumbbell"></i> Products</a>
               <a href="customers.html" class="active"></a><i class="fas fa-users"></i> Customers</a>
@@ -70,81 +70,64 @@
             <h1>Customer Management</h1>
           </div>
     
-          <div class="stats-grid">
-            <div class="stat-card">
-               <h3>Total Sales</h3>
-               <p class="stat-number">$12,430</p>
-          </div>
-          <div class="stat-card">
-              <h3>Total Orders</h3>
-              <p class="stat-number">380</p>
-          </div>
-          <div class="stat-card">
-              <h3>Total Customers</h3>
-              <p class="stat-number">142</p>
-          </div>
-          <div class="stat-card">
-              <h3>Low Stock Items</h3>
-              <p class="stat-number">5</p>
-          </div>
-      </div>
-          <div class="quick-actions">
-            <button class="action-btn"> Add Product</button>
-            <button class="action-btn"> Create Order</button>
-            <button class="action-btn"> View Report</button>
-          </div>
+          <div id="customers-view">
+            <div class="controls-bar">
+                <div class="search-filters">
+                    <div class="search-input">
+                        <input type="text" placeholder="Search customers...">
+                    </div>
+                    <button class="search-btn">Search</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Registered Customers</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Join Date</th>
+                            <th>Orders</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Sarah Lee</td>
+                            <td>sarah@gmail.com</td>
+                            <td>2025-10-01</td>
+                            <td>5</td>
+                            <td><span class="status delivered">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>Mike Boss</td>
+                            <td>mike@abc.com</td>
+                            <td>2025-11-12</td>
+                            <td>1</td>
+                            <td><span class="status delivered">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>Jessica Petter</td>
+                            <td>jessica@gmail.com</td>
+                            <td>2025-09-15</td>
+                            <td>12</td>
+                            <td><span class="status delivered">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>Harry Potter</td>
+                            <td>harry123@gmail.com</td>
+                            <td>2025-08-20</td>
+                            <td>8</td>
+                            <td><span class="status pending">Inactive</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-      <div class="card recent-orders">
-    <h2>Recent Orders</h2>
-
-    <table class="orders-table">
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>#1024</td>
-                <td>Bruno Mars</td>
-                <td>2025-11-14</td>
-                <td>$120.00</td>
-                <td><span class="status completed">Completed</span></td>
-            </tr>
-            <tr>
-                <td>#1025</td>
-                <td>Chris Wong</td>
-                <td>2025-11-14</td>
-                <td>$89.00</td>
-                <td><span class="status pending">Pending</span></td>
-            </tr>
-            <tr>
-                <td>#1026</td>
-                <td>Michael Jackson</td>
-                <td>2025-11-15</td>
-                <td>$240.00</td>
-                <td><span class="status cancelled">Cancelled</span></td>
-            </tr>
-        </tbody>
-    </table>
-    </div>
-          
-      <div class="card chart-placeholder">
-        <h2>Sales Chart (Coming Soon)</h2>
-        <div class="chart-box">
-          <p>Chart not implemented yet</p>
-      </div>
-    </div>
-    
-      <footer class="page-footer">
-          <p>Footer Would be added here</p>
-      </footer>
-
-</section>
+    </section>
         
       </main>
   

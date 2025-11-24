@@ -1,0 +1,18 @@
+document.addEventListener("in progress", () => {
+    const toggleButton = document.getElementById("toggle");
+    const modeIcon = document.getElementById("mode-icon");
+  if (localStorage.getItem("darkMode") === "enabled") {
+      document.body.classList.add("dark-mode");
+      modeIcon.className = "go-dark";
+    }
+toggleButton.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      if (document.body.classList.contains("dark-mode")) {
+        modeIcon.className = "go-dark";
+        localStorage.setItem("darkMode", "enabled");
+      } else {
+        modeIcon.className = "go-light";
+        localStorage.setItem("darkMode", "disabled");
+      }
+    });
+  });

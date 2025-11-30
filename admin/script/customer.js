@@ -25,9 +25,7 @@ async function searchCustomersFromDB(query) {
   return res.json();
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  
-// Add Customer Button Funnction ( For Admin Only) (via Backend )
+// Add Customer to DB Funnction ( For Admin Only) (via Backend )
 const addCustomerBtn = document.getElementById('add-customer-btn');
 
 if (addCustomerBtn) {

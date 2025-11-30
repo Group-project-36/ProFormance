@@ -331,3 +331,54 @@ body {
   background: #16a34a; 
   color: white;
 }
+
+/* Customer Management Add delete Btn*/
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.add-btn {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.add-btn:hover {
+  background: var(--primary-color-hover);
+}
+
+.add-btn i {
+  font-size: 14px;
+}
+
+.delete-btn {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background: #b91c1c;
+}
+
+.delete-btn i {
+  font-size: 14px;
+}

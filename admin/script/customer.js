@@ -83,7 +83,14 @@ if (addCustomerBtn) {
     }
   });
 }
-
+// Add Customer Btn
+  const addCustomerBtn = document.getElementById('add-customer-btn');
+  if (addCustomerBtn) {
+    addCustomerBtn.addEventListener('click', function() {
+      openAddCustomerModal();
+    });
+  }
+  
 
 // Delete Function
 

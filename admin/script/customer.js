@@ -36,3 +36,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Delete Function
+
+function deleteCustomer(button) {
+  if (confirm('Confirm if you want to delete this customer account and there details.')) {
+    const row = button.closest('tr');
+    row.remove();
+  }
+}

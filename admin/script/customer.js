@@ -92,7 +92,7 @@ if (addCustomerBtn) {
   }
   
 
-// Delete Function
+// Delete Function btn
 
 function deleteCustomer(button) {
   if (confirm('Confirm if you want to delete this customer account and there details.')) {
@@ -147,5 +147,65 @@ async function searchCustomers(query) {
     console.error('Error searching customers:', error);
     showError('Failed to search customers.');
     showEmptyState('Search failed. Please try again.');
+  }
+}
+
+//render Customer
+
+function renderCustomers(customers) {
+  const tbody = document.querySelector('.table-container tbody');
+  if (!tbody) return;
+  
+  if (customers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No customers found</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = customers.map(customer => {
+    const statusClass = customer.status.toLowerCase() === 'active' ? 'delivered' : 'pending';
+    return `
+      <tr data-customer-id="${customer.id}">
+        <td>${escapeHtml(customer.name)}</td>
+        <td>${escapeHtml(customer.email)}</td>
+        <td>${customer.joinDate || 'N/A'}</td>
+        <td>${customer.orders || 0}</td>
+        <td><span class="status ${statusClass}">${customer.status}</span></td>
+        <td>
+          <button class="delete-btn" onclick="deleteCustomer(${customer.id})" title="Delete customer">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Add Customer Submission
+async function handleAddCustomer(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const customerData = {
+    name: formData.get('name').trim(),
+    email: formData.get('email').trim(),
+    joinDate: formData.get('join-date') || new Date().toISOString().split('T')[0],
+    orders: parseInt(formData.get('orders')) || 0,
+    status: formData.get('status') || 'Active'
+  };
+  
+  if (!customerData.name || !customerData.email) {
+    showError('Name and email are required fields.');
+    return;
+  }
+
+    closeAddCustomerModal();
+    loadCustomers();
+    showSuccess('Customer added successfully!');
+  } catch (error) {
+    console.error('Error adding customer:', error);
+    showError(error.message || 'Failed to add customer. Please try again.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 }

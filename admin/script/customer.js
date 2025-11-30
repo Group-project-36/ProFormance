@@ -66,6 +66,20 @@ function closeAddCustomerModal() {
   document.getElementById('add-customer-modal').classList.remove('show');
 }
 
+// Delete Customer Function
+async function deleteCustomer(customerId) {
+  if (!confirm('Are you sure you want to delete this customer?')) return;
+
+  try {
+    await deleteCustomerFromDB(customerId);
+    await loadCustomers();
+  } catch (error) {
+    alert('Failed to delete customer.');
+  }
+}
+
+
+
 // Search 
 
 const searchInput = document.querySelector('.search-input input');
@@ -93,25 +107,22 @@ const searchBtn = document.querySelector('.search-btn');
 
 async function loadCustomers() {
   try {
-    showLoadingState();
     const customers = await fetchAllCustomers();
     renderCustomers(customers);
   } catch (error) {
     console.error('Error', error);
-    showError('Canot load, please check for connection ');
+    alert('Canot load, please check for connection ');
   }
 }
 
 //Search Query
 async function searchCustomers(query) {
   try {
-    showLoadingState();
     const customers = await searchCustomersFromDB(query);
     renderCustomers(customers);
   } catch (error) {
     console.error('Error searching customers:', error);
-    showError('Failed to search customers.');
-    showEmptyState('Search failed. Please try again.');
+    alert('Search Failed.');
   }
 }
 
@@ -163,14 +174,12 @@ async function handleAddCustomer(e) {
     return;
   }
 
+    try {
+    await addCustomerToDB(customerData);
     closeAddCustomerModal();
     loadCustomers();
-    showSuccess('Customer added successfully!');
   } catch (error) {
-    console.error('Error adding customer:', error);
-    showError(error.message || 'Failed to add customer. Please try again.');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
+    console.error(error);
+    alert('Failed to add customer.');
   }
 }

@@ -1,5 +1,6 @@
 const API_BASE_URL = 'http://cs2team36.cs2410-web01pvm.aston.ac.uk/api';
 
+document.addEventListener('DOMContentLoaded', () => {
 // Get Customer from DB
 async function fetchAllCustomers() {
   try {
@@ -141,8 +142,8 @@ function renderCustomers(customers) {
     const statusClass = customer.status.toLowerCase() === 'active' ? 'delivered' : 'pending';
     return `
       <tr data-customer-id="${customer.id}">
-        <td>${escapeHtml(customer.name)}</td>
-        <td>${escapeHtml(customer.email)}</td>
+        <td>${(customer.name)}</td>
+        <td>${(customer.email)}</td>
         <td>${customer.joinDate || 'N/A'}</td>
         <td>${customer.orders || 0}</td>
         <td><span class="status ${statusClass}">${customer.status}</span></td>
@@ -170,7 +171,7 @@ async function handleAddCustomer(e) {
   };
   
   if (!customerData.name || !customerData.email) {
-    showError('Name and email are required fields.');
+    alert('Name and email are required fields.');
     return;
   }
 

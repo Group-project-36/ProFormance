@@ -123,4 +123,29 @@ const searchBtn = document.querySelector('.search-btn');
     customerForm.addEventListener('submit', handleAddCustomer);
   }
 });
-                              
+
+// Load Customer whem first time go web
+
+async function loadCustomers() {
+  try {
+    showLoadingState();
+    const customers = await fetchAllCustomers();
+    renderCustomers(customers);
+  } catch (error) {
+    console.error('Error', error);
+    showError('Canot load, please check for connection ');
+  }
+}
+
+//Search Query
+async function searchCustomers(query) {
+  try {
+    showLoadingState();
+    const customers = await searchCustomersFromDB(query);
+    renderCustomers(customers);
+  } catch (error) {
+    console.error('Error searching customers:', error);
+    showError('Failed to search customers.');
+    showEmptyState('Search failed. Please try again.');
+  }
+}

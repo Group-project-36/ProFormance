@@ -100,3 +100,27 @@ function deleteCustomer(button) {
     row.remove();
   }
 }
+
+// Search 
+
+const searchInput = document.querySelector('.search-input input');
+const searchBtn = document.querySelector('.search-btn');
+  
+  if (searchInput && searchBtn) {
+    searchBtn.addEventListener('click', function() {
+      const query = searchInput.value.trim();
+      if (query) {
+        searchCustomers(query);
+      } else {
+        loadCustomers();
+      }
+});
+
+// Submit form
+
+  const customerForm = document.getElementById('customer-form');
+  if (customerForm) {
+    customerForm.addEventListener('submit', handleAddCustomer);
+  }
+});
+                              

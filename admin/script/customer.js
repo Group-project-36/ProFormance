@@ -1,21 +1,11 @@
 const API_BASE_URL = 'http://cs2team36.cs2410-web01pvm.aston.ac.uk/api';
 
-document.addEventListener('DOMContentLoaded', () => {
+
 // Get Customer from DB
 async function fetchAllCustomers() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/customers`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const customers = await response.json();
-    return customers;
-  } catch (error) {
-    console.error('Error Getting Customers:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/customers`);
+  if (!response.ok) throw new Error(response.status);
+  return response.json();
 }
 //Search customer from backend
 async function searchCustomersFromDB(query) {
@@ -43,11 +33,7 @@ async function addCustomerToDB(customerData) {
 async function deleteCustomerFromDB(customerId) {
   const response = await fetch(`${API_BASE_URL}/customers/${customerId}`, { method: 'DELETE' });
   
-  if (!response.ok) {
-    throw new Error(`Delete failed: ${response.status}`);
-  }
-  
-  return true;
+  if (!response.ok) throw new Error(`Delete failed: ${response.status}`);
 }
 
 // Add Customer Modal
@@ -83,8 +69,12 @@ async function deleteCustomer(customerId) {
 
 // Search 
 
-const searchInput = document.querySelector('.search-input input');
-const searchBtn = document.querySelector('.search-btn');
+document.addEventListener('DOMContentLoaded', () => {
+  loadCustomers();
+  
+  const searchInput = document.querySelector('.search-input input');
+  const searchBtn = document.querySelector('.search-btn');
+  const customerForm = document.getElementById('customer-form');
   
   if (searchInput && searchBtn) {
     searchBtn.addEventListener('click', function() {
@@ -94,16 +84,13 @@ const searchBtn = document.querySelector('.search-btn');
       } else {
         loadCustomers();
       }
-});
+  });
+}
 
-// Submit form
-
-  const customerForm = document.getElementById('customer-form');
   if (customerForm) {
     customerForm.addEventListener('submit', handleAddCustomer);
   }
 });
-
 // Load Customer whem first time go web
 
 async function loadCustomers() {

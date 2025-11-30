@@ -16,7 +16,14 @@ async function fetchAllCustomers() {
     throw error;
   }
 }
-
+// Get customer from backend
+async function searchCustomersFromDB(query) {
+  const res = await fetch(
+    `${API_BASE_URL}/customers/search?q=${encodeURIComponent(query)}`
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   

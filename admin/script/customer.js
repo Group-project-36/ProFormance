@@ -49,6 +49,23 @@ async function deleteCustomerFromDB(customerId) {
   return true;
 }
 
+// Add Customer Modal
+function openAddCustomerModal() {
+  const modal = document.getElementById('add-customer-modal');
+  const form = document.getElementById('customer-form');
+  modal.classList.add('show');
+  form.reset();
+
+  const joinDateInput = document.getElementById('join-date');
+  if (joinDateInput) {
+    joinDateInput.valueAsDate = new Date();
+  }
+}
+
+function closeAddCustomerModal() {
+  document.getElementById('add-customer-modal').classList.remove('show');
+}
+
 // Search 
 
 const searchInput = document.querySelector('.search-input input');

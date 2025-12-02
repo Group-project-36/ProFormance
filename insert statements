@@ -1,0 +1,53 @@
+INSERT INTO login_details (user_id, email_address, password_hash, password_salt)
+VALUES
+	(1, 'hpettus0@psu.edu', '$2a$04$28kZSRR3kp3GwLIeb8r4fe9XBHu/uV540wUSH5ji0PY4pgxLNwdlK', 'am4Ea5ZTTQ'),
+	(2, 'causello1@cbslocal.com', '$2a$04$ygDrUzkwGvVqNHXSxqMSCep/59vXYB2cvLRt8wQTfqAosQKj93coO', '5yu553a8B5'),
+	(3, 'fscottesmoor2@ask.com', '$2a$04$5m7pxeXyCAgBICz2o24jKeGgtEwRDoPlNMZLpPvEpFCHZeol6t46i', 'IujT388hhQ'),
+	(4, 'jferon3@topsy.com', '$2a$04$YSJ5pzYskR51hxu6o/SvL.BsOJ4dTpr9Yqlyb0C5bs7NBSkH8gJ82', '33zLFTDwzK'),
+	(5, 'bfife4@google.com.br', '$2a$04$hCBsQazm8XAWCcf4c7noAe3zPiulfocHlGTU.nO2re7G4oUPkO81e', 'r5U19qbDZP');
+    
+INSERT INTO users (first_name, last_name, company_name, country_phone_code, phone_number, email_verified, role, is_active)
+VALUES
+	('Anita', 'Go', NULL, 1, 3094555873, FALSE, 'admin', TRUE),
+    ('Orla', 'Shore', NULL, 44, 7762398615, FALSE, 'customer', TRUE),
+    ('Herman', 'Isgone', NULL, 7, 8555924671, FALSE, 'customer', TRUE),
+    ('Issac', 'Lollies', 'Confectionary&Co.', 36, 306598667, FALSE, 'business', TRUE),
+    ('John', 'Smith', 'Papermaker', 36, 706598667, FALSE, 'business', TRUE);
+    
+INSERT INTO user_tax_profiles (user_id, vat_number, tax_exempt, tax_validation_date)
+VALUES
+	(1, NULL, FALSE, NULL),
+    (2, NULL, FALSE, NULL),
+    (3, NULL, FALSE, NULL),
+	(4, 'GB672076234', TRUE, NULL), 
+    (5, 'GB982617630', TRUE, NULL);
+    
+INSERT INTO addresses_id (user_id, recipent_name, house_number, address_line_one, address_line_two, city, county, postcode, country_code, country_phone_code, phone_number, is_defualt_shipping_address, is_default_billing_address)
+VALUES
+	(1, 'Tilly Register', 27, 'Penlock Road', NULL, 'Wolverhampton', 'West Midlands', 'WV11 4HP', 'UK', 1, 3094555873, FALSE, FALSE),
+    (2, 'Jane Plain', 11, 'Ocean Way', NULL, 'Stafford', 'Staffordshire', 'ST16 8UD', 'UK', 44, '7762398615', FALSE, FALSE),
+    (3, 'Holly Bush', 9, 'Tipple Drive', NULL, 'Devon', 'Devonshire', 'EX39 6VR', 'UK', 7, 8555924671, FALSE, FALSE), 
+    (4, 'Alaska Bake', 96, 'Groove Street', NULL, 'Wensbury', 'West Midlands', 'WS10 9TS', 36, 306598667, FALSE, FALSE),
+    (5, 'Billy Thekid', 10, 'Downing Street', 'Westminster', 'London', 'Greater London', 'SW1A 2AA', 36, 706598667, FALSE, FALSE);
+    
+INSERT INTO currencies (currency_code, currency_name, symbol, is_active)
+VALUES
+	('GBP', 'Pound Sterling', '£', TRUE), 
+    ('USD', 'US Dollar', '$', TRUE),
+    ('EUR', 'Euro', '€', TRUE),
+    ('RUB', 'Russian Ruble', '₽', TRUE),
+    ('SLE', 'Leone', NULL, TRUE);
+   
+ INSERT INTO payment_providers (provider_id, provider_key, display_name, logo_url, client_token)
+ VALUES
+	(1, 'paypal', 'PayPal', NULL, NULL),
+    (2, 'amex', 'American Express', NULL, NULL),
+    (3, 'visa', 'Visa', NULL, NULL),
+    (4, 'mastercard', 'Mastercard', NULL, NULL),
+    (5, 'affirm', 'Affirm', NULL, NULL);
+    
+    
+    
+    
+    
+    

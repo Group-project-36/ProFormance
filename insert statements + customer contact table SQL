@@ -55,7 +55,9 @@ CREATE TABLE customer_contacts (
     contact_status ENUM ('Pending', 'Solved') NOT NULL,
     message_description TEXT NOT NULL,
     product_search VARCHAR(225),
-    order_id INT
+    order_id INT,
+	PRIMARY KEY (query_id),
+	INDEX idx_contact_status (contact_status),
 );
 
     

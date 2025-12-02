@@ -45,7 +45,19 @@ VALUES
     (3, 'visa', 'Visa', NULL, NULL),
     (4, 'mastercard', 'Mastercard', NULL, NULL),
     (5, 'affirm', 'Affirm', NULL, NULL);
-    
+
+CREATE TABLE customer_contacts (
+	query_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email_address VARCHAR(225) NOT NULL,
+    subject_select ENUM('General', 'Support', 'Feedback') NOT NULL,
+    contact_status ENUM ('Pending', 'Solved') NOT NULL,
+    message_description TEXT NOT NULL,
+    product_search VARCHAR(225),
+    order_id INT
+);
+
     
     
     

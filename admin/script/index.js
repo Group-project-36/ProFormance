@@ -227,3 +227,26 @@ async function handleProductSubmit(e) {
     console.error("Error saving product:", err);
   }
 }
+
+//Reset
+function openModal() {
+    document.getElementById("product-form").reset();
+    document.getElementById("p_id").value = ""; 
+    document.getElementById("modal-title").innerText = "Add Product";
+    document.getElementById("product-modal").style.display = "block";
+}
+
+// Edit button in table
+
+function editProduct(product) {
+    document.getElementById("p_id").value = product.id;
+    document.getElementById("p_name").value = product.product_name;
+    document.getElementById("p_sku").value = product.sku;
+    document.getElementById("p_price").value = product.price;
+    document.getElementById("p_stock").value = product.stock_quantity;
+    document.getElementById("p_image").value = product.image_url;
+    document.getElementById("p_desc").value = product.description || "";
+
+    document.getElementById("modal-title").innerText = "Edit Product";
+    document.getElementById("product-modal").style.display = "block";
+}

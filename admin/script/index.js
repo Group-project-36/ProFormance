@@ -79,3 +79,11 @@ content.innerHTML = `
       </div>
     </div>
   `;
+
+// ELement
+  document.getElementById("open-add-modal").addEventListener("click", () => openModal());
+  document.getElementById("product-form").addEventListener("submit", handleProductSubmit);
+  document.getElementById("product-search").addEventListener("keyup", handleSearch);
+
+  loadProducts();
+}

@@ -80,41 +80,23 @@ async function deleteCustomer(id) {
 
 
 
-// Search 
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadCustomers();
+// Search (Done)
   
-  const searchInput = document.querySelector('.search-input input');
-  const searchBtn = document.querySelector('.search-btn');
-  const customerForm = document.getElementById('customer-form');
-  
-  if (searchInput && searchBtn) {
-    searchBtn.addEventListener('click', function() {
-      const query = searchInput.value.trim();
-      if (query) {
-        searchCustomers(query);
-      } else {
-        loadCustomers();
-      }
-  });
-}
+document.getElementById("search-btn").addEventListener("click", async () => {
+  const keyword = document.getElementById("customer-search").value.toLowerCase();
 
-  if (customerForm) {
-    customerForm.addEventListener('submit', handleAddCustomer);
-  }
+  const res = await fetch(API_CUSTOMERS);
+  const list = await res.json();
+
+  const filtered = list.filter(c =>
+    (c.FullName || "").toLowerCase().includes(keyword) ||
+    (c.Email || "").toLowerCase().includes(keyword)
+  );
+
+  renderCustomers(filtered);
 });
-// Load Customer whem first time go web
-
-async function loadCustomers() {
-  try {
-    const customers = await fetchAllCustomers();
-    renderCustomers(customers);
-  } catch (error) {
-    console.error('Error', error);
-    alert('Canot load, please check for connection ');
-  }
-}
+// Load Customer 
+loadCustomers();
 
 //Search Query
 async function searchCustomers(query) {

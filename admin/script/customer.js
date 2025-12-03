@@ -1,7 +1,7 @@
 const API_CUSTOMERS = "/api/customers";
 
 
-// Load Customer
+// Load Customer (Done)
 async function loadCustomers() {
   try {
     const res = await fetch(API_CUSTOMERS);
@@ -121,34 +121,32 @@ async function searchCustomers(query) {
   }
 }
 
-//render Customer
+//render Customer (Done)
 
 function renderCustomers(customers) {
-  const tbody = document.querySelector('.table-container tbody');
-  if (!tbody) return;
+  const tbody = document.getElementById("customer-table-body");
+  tbody.innerHTML = "";
   
-  if (customers.length === 0) {
+  if (!list || list.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No customers found</td></tr>';
     return;
   }
   
-  tbody.innerHTML = customers.map(customer => {
-    const statusClass = customer.status.toLowerCase() === 'active' ? 'delivered' : 'pending';
-    return `
-      <tr data-customer-id="${customer.id}">
-        <td>${(customer.name)}</td>
-        <td>${(customer.email)}</td>
-        <td>${customer.joinDate || 'N/A'}</td>
-        <td>${customer.orders || 0}</td>
-        <td><span class="status ${statusClass}">${customer.status}</span></td>
+  list.forEach(customer => {
+    const row = `
+      <tr>
+        <td>${customer.FullName || customer.name}</td>
+        <td>${customer.Email || customer.email}</td>
+        <td>${customer.JoinDate || "-"}</td>
+        <td>${customer.OrdersCount ?? "-"}</td>
+        <td>${customer.Status || "Active"}</td>
         <td>
-          <button class="delete-btn" onclick="deleteCustomer(${customer.id})" title="Delete customer">
-            <i class="fas fa-trash"></i>
-          </button>
+          <button class="delete-btn" onclick="deleteCustomer(${customer.CustomerID})">Delete</button>
         </td>
       </tr>
     `;
-  }).join('');
+    tbody.innerHTML += row;
+  });
 }
 
 // Add Customer Submission

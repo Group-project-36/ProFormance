@@ -195,3 +195,35 @@ async function deleteProduct(id) {
     console.error("Error deleting product:", err);
   }
 }
+
+//Submit (Add,Edit)
+async function handleProductSubmit(e) {
+  e.preventDefault();
+
+  const id = document.getElementById("p_id").value;
+  const formData = ["p_name", "p_sku", "p_price", "p_stock", "p_image", "p_desc"]
+    .reduce((data, field) => {
+      data[field.replace("p_", "")] = document.getElementById(field).value;
+      return data;
+    }, { is_active: 1 });
+
+  try {
+    const method = id ? "PUT" : "POST";
+    const url = id ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+
+    if (res.ok) {
+      closeModal();
+      loadProducts();
+    } else {
+      alert("Failed to save product.");
+    }
+  } catch (err) {
+    console.error("Error saving product:", err);
+  }
+}

@@ -111,3 +111,37 @@ function renderProducts(products) {
     return;
   }
   const htmlRows = products.map(p => {
+
+
+
+
+// Status of stock
+    let statusBadge = '<span class="status completed">In Stock</span>';
+    if (p.stock_quantity == 0) statusBadge = '<span class="status cancelled">Out of Stock</span>';
+    else if (p.stock_quantity <= LOW_STOCK_THRESHOLD) statusBadge = '<span class="status pending">Low Stock</span>';
+
+    // Format Price
+    const displayPrice = parseFloat(p.price).toFixed(2); 
+
+    return `
+      <tr>
+        <td><img src="${p.image_url || 'assets/placeholder.png'}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
+        <td>
+            <strong>${p.product_name}</strong><br>
+            <small style="color:#666;">SKU: ${p.sku || '-'}</small>
+        </td>
+        <td>$${displayPrice}</td>
+        <td>${p.stock_quantity}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <button style="cursor:pointer; color:blue; background:none; border:none;" onclick='editProduct(${JSON.stringify(p)})'>Edit</button>
+          <button class="delete-btn" style="cursor:pointer; color:red; background:none; border:none; margin-left:10px;" onclick="deleteProduct(${p.id})">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = htmlRows.join('');
+}
+
+

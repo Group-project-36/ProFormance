@@ -1,12 +1,19 @@
-const API_BASE_URL = 'http://cs2team36.cs2410-web01pvm.aston.ac.uk/api';
+const API_CUSTOMERS = "/api/customers";
 
 
-// Get Customer from DB
-async function fetchAllCustomers() {
-  const response = await fetch(`${API_BASE_URL}/customers`);
-  if (!response.ok) throw new Error(response.status);
-  return response.json();
+// Load Customer
+async function loadCustomers() {
+  try {
+    const res = await fetch(API_CUSTOMERS);
+    const data = await res.json();
+
+    renderCustomers(data);
+  } catch (err) {
+    console.error("Error loading customers:", err);
+  }
 }
+
+
 //Search customer from backend
 async function searchCustomersFromDB(query) {
   const res = await fetch(

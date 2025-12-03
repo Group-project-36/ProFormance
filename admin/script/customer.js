@@ -38,9 +38,9 @@ document.getElementById("search-btn").addEventListener("click", async () => {
   const keyword = document.getElementById("customer-search").value.toLowerCase();
 
   const res = await fetch(API_CUSTOMERS);
-  const list = await res.json();
+  const customersList = await res.json();
 
-  const filtered = list.filter(c =>
+  const filtered = customersList.filter(c =>
     (c.FullName || "").toLowerCase().includes(keyword) ||
     (c.Email || "").toLowerCase().includes(keyword)
   );
@@ -54,13 +54,13 @@ function renderCustomers(customers) {
   const tbody = document.getElementById("customer-table-body");
   tbody.innerHTML = "";
   
-  if (!customers || list.length === 0) {
+  if (!customers || customers.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No customers found</td></tr>';
     return;
   }
   
-  list.forEach(customer => {
-    const row = `
+  const htmlRows = customers.map(customer => {
+    return `
       <tr>
         <td>${customer.FullName || customer.name}</td>
         <td>${customer.Email || customer.email}</td>
@@ -72,8 +72,8 @@ function renderCustomers(customers) {
         </td>
       </tr>
     `;
-    tbody.innerHTML += row;
   });
+  tbody.innerHTML = htmlRows.join('');
 }
 
 // Add Customer Submission 
@@ -107,4 +107,4 @@ document.getElementById("customer-form").addEventListener("submit", async functi
 });
 
 // Load Customer 
-loadCustomers()=
+loadCustomers();

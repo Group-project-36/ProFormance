@@ -15,9 +15,7 @@ async function loadCustomers() {
 
 // Delete Customer Function (need provide DELETE /customers/{id})
 async function deleteCustomer(id) {
-  if (!confirm('Are you sure you want to delete this customer?')){
-    return;
-  }
+  if (!confirm('Are you sure you want to delete this customer?')) return;
 
   try {
     const res = await fetch(`${API_CUSTOMERS}/${id}`, { 
@@ -27,7 +25,10 @@ async function deleteCustomer(id) {
     if (res.ok) {
        await loadCustomers();
     } else {
-    alert('Failed to delete customer.');
+      alert('Failed to delete customer.');
+    }
+  } catch (err) {
+    console.error("Error deleting customer:", err);
   }
 }
 
@@ -46,8 +47,6 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 
   renderCustomers(filtered);
 });
-// Load Customer 
-loadCustomers();
 
 //render Customer
 
@@ -55,7 +54,7 @@ function renderCustomers(customers) {
   const tbody = document.getElementById("customer-table-body");
   tbody.innerHTML = "";
   
-  if (!list || list.length === 0) {
+  if (!customers || list.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No customers found</td></tr>';
     return;
   }
@@ -106,3 +105,6 @@ document.getElementById("customer-form").addEventListener("submit", async functi
     console.error("Error adding customer:", err);
   }
 });
+
+// Load Customer 
+loadCustomers()=

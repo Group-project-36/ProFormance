@@ -144,4 +144,34 @@ function renderProducts(products) {
   tbody.innerHTML = htmlRows.join('');
 }
 
+// Low Stock Alert
+function updateStockAlerts(products) {
+    // Calculate for low stocks
+    const lowStockItems = products.filter(p => p.stock_quantity <= LOW_STOCK_THRESHOLD).length;
+    const totalItems = products.reduce((sum, p) => sum + parseInt(p.stock_quantity || 0), 0);
+
+    // Update
+    const lowStockEl = document.getElementById("low-stock-count");
+    if(lowStockEl) {
+        lowStockEl.innerText = lowStockItems;
+        lowStockEl.style.color = lowStockItems > 0 ? "red" : "black";
+    }
+
+    const totalStockEl = document.getElementById("total-stock-count");
+    if(totalStockEl) totalStockEl.innerText = totalItems;
+}
+
+// Search Function
+async function handleSearch() {
+  const keyword = document.getElementById("product-search").value.toLowerCase();
+  const res = await fetch(API_PRODUCTS);
+  const list = await res.json();
+
+  const filtered = list.filter(p => 
+    (p.product_name || "").toLowerCase().includes(keyword) || 
+    (p.sku || "").toLowerCase().includes(keyword)
+  );
+
+  renderProducts(filtered);
+}
 

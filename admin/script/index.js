@@ -175,3 +175,23 @@ async function handleSearch() {
   renderProducts(filtered);
 }
 
+// Add/Edit/Delete
+
+//Delete
+async function deleteProduct(id) {
+  if (!confirm('Are you sure you want to delete this product?')) return;
+
+  try {
+    const res = await fetch(`${API_PRODUCTS}/${id}`, { 
+      method: "DELETE" 
+    });
+
+    if (res.ok) {
+       await loadProducts();
+    } else {
+      alert('Failed to delete product.');
+    }
+  } catch (err) {
+    console.error("Error deleting product:", err);
+  }
+}

@@ -87,3 +87,26 @@ content.innerHTML = `
 
   loadProducts();
 }
+
+// Load Product
+
+async function loadProducts() {
+  try {
+    const res = await fetch(API_PRODUCTS);
+    const data = await res.json(); 
+// Low alert
+    renderProducts(data);
+    updateStockAlerts(data); 
+  } catch (err) {
+    console.error("Error loading products:", err);
+  }
+}
+
+function renderProducts(products) {
+  const tbody = document.getElementById("product-table-body");
+  tbody.innerHTML = "";
+
+  if (!products || products.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No products found</td></tr>';
+    return;
+  }

@@ -149,30 +149,32 @@ function renderCustomers(customers) {
   });
 }
 
-// Add Customer Submission
-async function handleAddCustomer(e) {
+// Add Customer Submission (Done)
+document.getElementById("customer-form").addEventListener("submit", async function(e) {
   e.preventDefault();
   
-  const formData = new FormData(e.target);
-  const customerData = {
-    name: formData.get('name').trim(),
-    email: formData.get('email').trim(),
-    joinDate: formData.get('join-date') || new Date().toISOString().split('T')[0],
-    orders: parseInt(formData.get('orders')) || 0,
-    status: formData.get('status') || 'Active'
+  const newData = {
+    FullName: document.getElementById("name").value,
+    Email: document.getElementById("email").value,
+    JoinDate: document.getElementById("join-date").value,
+    OrdersCount: document.getElementById("orders").value,
+    Status: document.getElementById("status").value
   };
   
-  if (!customerData.name || !customerData.email) {
-    alert('Name and email are required fields.');
-    return;
-  }
+  try {
+    const res = await fetch(API_CUSTOMERS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newData)
+    });
 
-    try {
-    await addCustomerToDB(customerData);
-    closeAddCustomerModal();
-    loadCustomers();
-  } catch (error) {
-    console.error(error);
-    alert('Failed to add customer.');
+    if (res.ok) {
+      closeModal();
+      loadCustomers();
+    } else {
+      alert("Failed to add customer.");
+    }
+  } catch (err) {
+    console.error("Error adding customer:", err);
   }
-}
+});

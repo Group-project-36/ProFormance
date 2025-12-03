@@ -60,14 +60,20 @@ function closeAddCustomerModal() {
   document.getElementById('add-customer-modal').classList.remove('show');
 }
 
-// Delete Customer Function
-async function deleteCustomer(customerId) {
-  if (!confirm('Are you sure you want to delete this customer?')) return;
+// Delete Customer Function (need provide DELETE /customers/{id})
+async function deleteCustomer(id) {
+  if (!confirm('Are you sure you want to delete this customer?')){
+    return;
+  }
 
   try {
-    await deleteCustomerFromDB(customerId);
-    await loadCustomers();
-  } catch (error) {
+    const res = await fetch(`${API_CUSTOMERS}/${id}`, { 
+      method: "DELETE" 
+    });
+
+    if (res.ok) {
+       await loadCustomers();
+    } else {
     alert('Failed to delete customer.');
   }
 }

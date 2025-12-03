@@ -1,0 +1,1640 @@
+DROP DATABASE IF EXISTS ProFormanceDB;
+
+CREATE DATABASE IF NOT EXISTS ProFormanceDB
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+USE ProFormanceDB;
+
+CREATE TABLE users (
+    user_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    company_name VARCHAR(255),
+    country_phone_code INT NOT NULL,
+    phone_number BIGINT UNSIGNED NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
+    user_role ENUM('admin', 'customer', 'business') NOT NULL DEFAULT 'customer',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (user_id),
+    INDEX idx_role (user_role),
+    INDEX idx_is_active (is_active)
+);
+
+CREATE TABLE login_details (
+    user_id BIGINT UNSIGNED NOT NULL,
+    email_address VARCHAR(255) NOT NULL UNIQUE CHECK (email_address REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
+    password_hash VARCHAR(255) NOT NULL,
+    password_salt VARCHAR(32) NOT NULL,
+
+    PRIMARY KEY (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    INDEX idx_email_address (email_address)
+);
+
+CREATE TABLE user_tax_profiles (
+    user_id BIGINT UNSIGNED NOT NULL,
+    vat_number VARCHAR(50),
+    tax_exempt BOOLEAN NOT NULL DEFAULT FALSE,
+    tax_validation_date TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (user_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_vat_number (vat_number),
+    INDEX idx_tax_exempt (tax_exempt)
+);
+
+CREATE TABLE countries (
+    country_code CHAR(2) NOT NULL,
+    country_name VARCHAR(100) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    iso_alpha_3 CHAR(3) NOT NULL UNIQUE,
+    iso_numeric SMALLINT NOT NULL UNIQUE,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (country_code),
+
+    INDEX idx_country_name (country_name),
+    INDEX idx_is_active (is_active),
+    INDEX idx_sort_order (sort_order)
+);
+
+CREATE TABLE addresses (
+    address_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    recipient_name VARCHAR(200) NOT NULL,
+    house_number VARCHAR(10) NOT NULL,
+    address_line_one VARCHAR(100) NOT NULL,
+    address_line_two VARCHAR(100),
+    city VARCHAR(100) NOT NULL,
+    county VARCHAR(100),
+    postcode VARCHAR(100) NOT NULL,
+    country_code CHAR(2) NOT NULL,
+	country_phone_code INT NOT NULL,
+    phone_number VARCHAR(20),
+    is_default_shipping_address BOOLEAN DEFAULT FALSE,
+    is_default_billing_address BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (address_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (country_code) REFERENCES countries(country_code)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_user_id (user_id),
+    INDEX idx_default_billing (is_default_billing_address),
+    INDEX idx_default_shipping (is_default_shipping_address)
+);
+
+
+
+CREATE TABLE brands (
+    brand_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    brand_name VARCHAR(100) NOT NULL UNIQUE,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    brand_description TEXT,
+    logo_url VARCHAR(255),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (brand_id),
+
+    INDEX idx_slug (slug),
+    INDEX idx_is_active (is_active),
+    INDEX idx_sort_order (sort_order)
+);
+
+CREATE TABLE categories (
+    category_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    category_name VARCHAR(100) NOT NULL UNIQUE,
+    category_description TEXT,
+    sort_order INT DEFAULT 0,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    parent_id BIGINT UNSIGNED,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (category_id),
+
+    FOREIGN KEY (parent_id) REFERENCES categories(category_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_slug (slug),
+    INDEX idx_sort_order (sort_order),
+    INDEX idx_is_active (is_active)
+);
+CREATE TABLE currencies (
+    currency_code CHAR(3) NOT NULL,
+    currency_name VARCHAR(50) NOT NULL,
+    symbol VARCHAR(10),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (currency_code),
+
+    INDEX idx_is_active (is_active)
+);
+
+CREATE TABLE products (
+    product_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    product_name VARCHAR(255) NOT NULL,
+    brand_id BIGINT UNSIGNED NOT NULL,
+    product_description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    short_description VARCHAR(500),
+    meta_title VARCHAR(200),
+    meta_description VARCHAR(300),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (product_id),
+
+    FOREIGN KEY (brand_id) REFERENCES brands(brand_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_brand_id (brand_id),
+    INDEX idx_is_active (is_active),
+    INDEX idx_created_at (created_at)
+);
+
+CREATE TABLE product_category (
+    product_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NOT NULL,
+
+    PRIMARY KEY (product_id, category_id),
+
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_product_id (product_id),
+    INDEX idx_category_id (category_id)
+);
+CREATE TABLE variant_attributes (
+    attribute_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    attribute_name VARCHAR(50) NOT NULL UNIQUE,
+    display_name VARCHAR(100) NOT NULL UNIQUE,
+    selection_order INT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    PRIMARY KEY (attribute_id)
+);
+CREATE TABLE variant_options (
+    option_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    attribute_id BIGINT UNSIGNED NOT NULL,
+    variant_value VARCHAR(100) NOT NULL,
+    display_value VARCHAR(100) NOT NULL,
+    sort_order INT DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    PRIMARY KEY (option_id),
+
+    FOREIGN KEY (attribute_id) REFERENCES variant_attributes(attribute_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    -- Composite index for ordering options within an attribute
+    INDEX idx_attribute_sort (attribute_id, sort_order)
+);
+
+CREATE TABLE product_variants (
+    variant_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    product_id BIGINT UNSIGNED NOT NULL,
+    sku VARCHAR(64) NOT NULL UNIQUE,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    barcode VARCHAR(64) UNIQUE,
+    title VARCHAR(200),
+    options_key VARCHAR(255),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (variant_id),
+
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE variant_combinations (
+    variant_id BIGINT UNSIGNED NOT NULL,
+    option_id BIGINT UNSIGNED NOT NULL,
+
+    PRIMARY KEY (variant_id, option_id),
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (option_id) REFERENCES variant_options(option_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+CREATE TABLE variant_currency_prices (
+    variant_id BIGINT UNSIGNED NOT NULL,
+    currency_code CHAR(3) NOT NULL,
+    price_penny INT NOT NULL,
+    was_price_penny INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Composite primary key
+    PRIMARY KEY (variant_id, currency_code),
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (currency_code) REFERENCES currencies(currency_code)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_variant_id (variant_id),
+    INDEX idx_currency_code (currency_code)
+);
+CREATE TABLE inventory (
+    variant_id BIGINT UNSIGNED NOT NULL,
+    available_stock INT NOT NULL DEFAULT 0,
+    stock_allocated INT NOT NULL DEFAULT 0,
+    reorder_point INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (variant_id),
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE TABLE product_images (
+    image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    variant_id BIGINT UNSIGNED NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    alt_text VARCHAR(200),
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (image_id),
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+CREATE TABLE payment_providers (
+    provider_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    provider_key VARCHAR(50) NOT NULL UNIQUE,
+    display_name VARCHAR(100) NOT NULL,
+    logo_url TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (provider_id)
+);
+CREATE TABLE carts (
+    cart_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    client_token CHAR(36) UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (cart_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_user_id (user_id)
+);
+CREATE TABLE orders (
+    order_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_number VARCHAR(50) NOT NULL UNIQUE,
+    user_id BIGINT UNSIGNED,
+    currency_code CHAR(3) NOT NULL,
+	order_status ENUM('Pending', 'Paid', 'Fulfilled', 'Cancelled', 'Refunded') NOT NULL DEFAULT 'Pending',
+
+    subtotal_penny INT NOT NULL,
+    shipping_penny INT NOT NULL DEFAULT 0,
+    tax_penny INT NOT NULL DEFAULT 0,
+    discount_penny INT NOT NULL DEFAULT 0,
+    total_penny INT NOT NULL,
+
+    ship_recipient_name VARCHAR(200),
+    ship_house_number VARCHAR(10),
+    ship_address_line_one VARCHAR(100),
+    ship_address_line_two VARCHAR(100),
+    ship_city VARCHAR(100),
+    ship_county VARCHAR(100),
+    ship_postcode VARCHAR(100),
+    ship_country_code CHAR(2),
+    ship_phone_number VARCHAR(30),
+    shipping_address_id BIGINT UNSIGNED,
+
+    bill_recipient_name VARCHAR(200),
+    bill_house_number VARCHAR(10),
+    bill_address_line_one VARCHAR(100),
+    bill_address_line_two VARCHAR(100),
+    bill_city VARCHAR(100),
+    bill_county VARCHAR(100),
+    bill_postcode VARCHAR(100),
+    bill_country_code CHAR(2),
+    bill_phone_number VARCHAR(30),
+    billing_address_id BIGINT UNSIGNED,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (order_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    FOREIGN KEY (currency_code) REFERENCES currencies(currency_code)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (ship_country_code) REFERENCES countries(country_code)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    FOREIGN KEY (bill_country_code) REFERENCES countries(country_code)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    FOREIGN KEY (shipping_address_id) REFERENCES addresses(address_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    FOREIGN KEY (billing_address_id) REFERENCES addresses(address_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    INDEX idx_order_number (order_number),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (order_status),
+    INDEX idx_created_at (created_at)
+);
+CREATE TABLE order_items (
+    order_item_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    variant_id BIGINT UNSIGNED NOT NULL,
+    sku VARCHAR(64) NOT NULL,
+    title VARCHAR(64) NOT NULL,
+    unit_price_penny INT NOT NULL,
+    quantity INT NOT NULL,
+    tax_rate DECIMAL(4,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (order_item_id),
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_order_id (order_id)
+);
+CREATE TABLE payments (
+    payment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    provider_id BIGINT UNSIGNED NOT NULL,
+    provider_ref VARCHAR(100),
+    amount_penny INT NOT NULL,
+    currency_code CHAR(3) NOT NULL,
+	return_status ENUM('Authorised', 'Voided', 'Refunded', 'Failed') NOT NULL DEFAULT 'Authorised',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (payment_id),
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (provider_id) REFERENCES payment_providers(provider_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (currency_code) REFERENCES currencies(currency_code)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+);
+CREATE TABLE discounts (
+    discount_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    discount_code VARCHAR(50) UNIQUE,
+    discoun_type VARCHAR(50) NOT NULL,
+    discount_value DECIMAL(12,2) NOT NULL,
+    starts_at TIMESTAMP NULL,
+    ends_at TIMESTAMP NULL,
+    usage_limit INT,
+    per_user_limit INT,
+    min_subtotal_penny INT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (discount_id),
+
+    INDEX idx_code (discount_code),
+    INDEX idx_is_active (is_active),
+    INDEX idx_starts_at (starts_at),
+    INDEX idx_ends_at (ends_at)
+);
+CREATE TABLE order_discounts (
+    order_id BIGINT UNSIGNED NOT NULL,
+    discount_id BIGINT UNSIGNED NOT NULL,
+    amount_applied_penny INT NOT NULL DEFAULT 0,
+
+    PRIMARY KEY (order_id, discount_id),
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (discount_id) REFERENCES discounts(discount_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_order_id (order_id)
+);
+CREATE TABLE discount_redemptions (
+    redemption_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    discount_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    order_id BIGINT UNSIGNED NOT NULL,
+    redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (redemption_id),
+
+    FOREIGN KEY (discount_id) REFERENCES discounts(discount_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_discount_id (discount_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_order_id (order_id)
+);
+CREATE TABLE wishlists (
+    wishlist_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    wishlist_name VARCHAR(100) NOT NULL DEFAULT 'My Wishlist',
+    is_public BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (wishlist_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_user_id (user_id)
+);
+CREATE TABLE wishlist_items (
+    wishlists_id BIGINT UNSIGNED NOT NULL,
+    variant_id BIGINT UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (wishlists_id, variant_id),
+
+    FOREIGN KEY (wishlists_id) REFERENCES wishlists(wishlist_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_wishlists_id (wishlists_id),
+    INDEX idx_variant_id (variant_id)
+);
+CREATE TABLE reviews (
+    review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    product_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    rating SMALLINT NOT NULL,
+    title VARCHAR(200),
+    body TEXT,
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (review_id),
+
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_product_id (product_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_approved (is_approved)
+);
+CREATE TABLE returns (
+    return_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    return_status ENUM('Requested', 'Approved', 'Received', 'Rejected', 'Refunded', 'Cancelled') NOT NULL DEFAULT 'Requested',
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (return_id),
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    INDEX idx_order_id (order_id),
+    INDEX idx_status (return_status)
+);
+CREATE TABLE return_items (
+    return_id BIGINT UNSIGNED NOT NULL,
+    order_item_id BIGINT UNSIGNED NOT NULL,
+    quantity INT NOT NULL,
+    refund_amount_penny INT,
+    condition_notes TEXT,
+
+    PRIMARY KEY (return_id, order_item_id),
+
+    FOREIGN KEY (return_id) REFERENCES returns(return_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (order_item_id) REFERENCES order_items(order_item_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_return_id (return_id),
+    INDEX idx_order_item_id (order_item_id)
+);
+CREATE TABLE refunds (
+    refund_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    payment_id BIGINT UNSIGNED NOT NULL,
+    amount_penny INT NOT NULL,
+    refund_status ENUM('Pending', 'Succeeded', 'Rejected') NOT NULL DEFAULT 'Pending',
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (refund_id),
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (payment_id) REFERENCES payments(payment_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    INDEX idx_order_id (order_id),
+    INDEX idx_payment_id (payment_id),
+    INDEX idx_status (refund_status)
+);
+
+
+CREATE TABLE customer_contacts (
+	query_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email_address VARCHAR(225) NOT NULL,
+    subject_select ENUM('General', 'Support', 'Feedback') NOT NULL,
+    contact_status ENUM ('Pending', 'Solved') NOT NULL,
+    message_description TEXT NOT NULL,
+    product_search VARCHAR(225),
+    order_id INT,
+	PRIMARY KEY (query_id),
+	INDEX idx_contact_status (contact_status)
+);
+
+
+-- The following trigger is used to enforce email format validation
+-- In MySQL versions before 8.0.16 and MariaDB versions before 10.2.1
+-- As those versions just either threw an error for constraints or straight up ignored it.
+
+-- Also provides a more user friendly error message!
+
+DELIMITER $$
+CREATE TRIGGER checkEmailBeforeInsert
+BEFORE INSERT ON login_details
+FOR EACH ROW
+BEGIN
+    IF NEW.email_address NOT REGEXP '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid email format: Must be in user@example.com format';
+    END IF;
+END $$
+
+INSERT INTO users (first_name, last_name, company_name, country_phone_code, phone_number, email_verified, user_role, is_active)
+VALUES
+	('Anita', 'Go', NULL, 1, 3094555873, FALSE, 'admin', TRUE),
+    ('Orla', 'Shore', NULL, 44, 7762398615, FALSE, 'customer', TRUE),
+    ('Herman', 'Isgone', NULL, 7, 8555924671, FALSE, 'customer', TRUE),
+    ('Issac', 'Lollies', 'Confectionary&Co.', 36, 306598667, FALSE, 'business', TRUE),
+    ('John', 'Smith', 'Papermaker', 36, 706598667, FALSE, 'business', TRUE);
+
+INSERT INTO login_details (user_id, email_address, password_hash, password_salt)
+VALUES
+	(1, 'hpettus0@psu.edu', '$2a$04$28kZSRR3kp3GwLIeb8r4fe9XBHu/uV540wUSH5ji0PY4pgxLNwdlK', 'am4Ea5ZTTQ'),
+	(2, 'causello1@cbslocal.com', '$2a$04$ygDrUzkwGvVqNHXSxqMSCep/59vXYB2cvLRt8wQTfqAosQKj93coO', '5yu553a8B5'),
+	(3, 'fscottesmoor2@ask.com', '$2a$04$5m7pxeXyCAgBICz2o24jKeGgtEwRDoPlNMZLpPvEpFCHZeol6t46i', 'IujT388hhQ'),
+	(4, 'jferon3@topsy.com', '$2a$04$YSJ5pzYskR51hxu6o/SvL.BsOJ4dTpr9Yqlyb0C5bs7NBSkH8gJ82', '33zLFTDwzK'),
+	(5, 'bfife4@google.com.br', '$2a$04$hCBsQazm8XAWCcf4c7noAe3zPiulfocHlGTU.nO2re7G4oUPkO81e', 'r5U19qbDZP');
+    
+
+    
+INSERT INTO user_tax_profiles (user_id, vat_number, tax_exempt, tax_validation_date)
+VALUES
+	(1, NULL, FALSE, NULL),
+    (2, NULL, FALSE, NULL),
+    (3, NULL, FALSE, NULL),
+	(4, 'GB672076234', TRUE, '2030-05-15'), 
+    (5, 'GB982617630', TRUE, '2030-05-15');
+    
+INSERT INTO countries (country_code, country_name, is_active, iso_alpha_3, iso_numeric, sort_order) VALUES
+('AD', 'Andorra', TRUE, 'AND', 20, 0),
+('AE', 'United Arab Emirates', TRUE, 'ARE', 784, 0),
+('AF', 'Afghanistan', TRUE, 'AFG', 4, 0),
+('AG', 'Antigua and Barbuda', TRUE, 'ATG', 28, 0),
+('AI', 'Anguilla', TRUE, 'AIA', 660, 0),
+('AL', 'Albania', TRUE, 'ALB', 8, 0),
+('AM', 'Armenia', TRUE, 'ARM', 51, 0),
+('AO', 'Angola', TRUE, 'AGO', 24, 0),
+('AQ', 'Antarctica', TRUE, 'ATA', 10, 0),
+('AR', 'Argentina', TRUE, 'ARG', 32, 0),
+('AS', 'American Samoa', TRUE, 'ASM', 16, 0),
+('AT', 'Austria', TRUE, 'AUT', 40, 0),
+('AU', 'Australia', TRUE, 'AUS', 36, 0),
+('AW', 'Aruba', TRUE, 'ABW', 533, 0),
+('AX', 'Åland Islands', TRUE, 'ALA', 248, 0),
+('AZ', 'Azerbaijan', TRUE, 'AZE', 31, 0),
+
+('BA', 'Bosnia and Herzegovina', TRUE, 'BIH', 70, 0),
+('BB', 'Barbados', TRUE, 'BRB', 52, 0),
+('BD', 'Bangladesh', TRUE, 'BGD', 50, 0),
+('BE', 'Belgium', TRUE, 'BEL', 56, 0),
+('BF', 'Burkina Faso', TRUE, 'BFA', 854, 0),
+('BG', 'Bulgaria', TRUE, 'BGR', 100, 0),
+('BH', 'Bahrain', TRUE, 'BHR', 48, 0),
+('BI', 'Burundi', TRUE, 'BDI', 108, 0),
+('BJ', 'Benin', TRUE, 'BEN', 204, 0),
+('BL', 'Saint Barthélemy', TRUE, 'BLM', 652, 0),
+('BM', 'Bermuda', TRUE, 'BMU', 60, 0),
+('BN', 'Brunei Darussalam', TRUE, 'BRN', 96, 0),
+('BO', 'Bolivia (Plurinational State of)', TRUE, 'BOL', 68, 0),
+('BQ', 'Bonaire, Sint Eustatius and Saba', TRUE, 'BES', 535, 0),
+('BR', 'Brazil', TRUE, 'BRA', 76, 0),
+('BS', 'Bahamas', TRUE, 'BHS', 44, 0),
+('BT', 'Bhutan', TRUE, 'BTN', 64, 0),
+('BV', 'Bouvet Island', TRUE, 'BVT', 74, 0),
+('BW', 'Botswana', TRUE, 'BWA', 72, 0),
+('BY', 'Belarus', TRUE, 'BLR', 112, 0),
+('BZ', 'Belize', TRUE, 'BLZ', 84, 0),
+
+('CA', 'Canada', TRUE, 'CAN', 124, 0),
+('CC', 'Cocos (Keeling) Islands', TRUE, 'CCK', 166, 0),
+('CD', 'Congo, Democratic Republic of the', TRUE, 'COD', 180, 0),
+('CF', 'Central African Republic', TRUE, 'CAF', 140, 0),
+('CG', 'Congo', TRUE, 'COG', 178, 0),
+('CH', 'Switzerland', TRUE, 'CHE', 756, 0),
+('CI', 'Côte d\'Ivoire', TRUE, 'CIV', 384, 0),
+('CK', 'Cook Islands', TRUE, 'COK', 184, 0),
+('CL', 'Chile', TRUE, 'CHL', 152, 0),
+('CM', 'Cameroon', TRUE, 'CMR', 120, 0),
+('CN', 'China', TRUE, 'CHN', 156, 0),
+('CO', 'Colombia', TRUE, 'COL', 170, 0),
+('CR', 'Costa Rica', TRUE, 'CRI', 188, 0),
+('CU', 'Cuba', TRUE, 'CUB', 192, 0),
+('CV', 'Cabo Verde', TRUE, 'CPV', 132, 0),
+('CW', 'Curaçao', TRUE, 'CUW', 531, 0),
+('CX', 'Christmas Island', TRUE, 'CXR', 162, 0),
+('CY', 'Cyprus', TRUE, 'CYP', 196, 0),
+('CZ', 'Czechia', TRUE, 'CZE', 203, 0),
+
+('DE', 'Germany', TRUE, 'DEU', 276, 0),
+('DJ', 'Djibouti', TRUE, 'DJI', 262, 0),
+('DK', 'Denmark', TRUE, 'DNK', 208, 0),
+('DM', 'Dominica', TRUE, 'DMA', 212, 0),
+('DO', 'Dominican Republic', TRUE, 'DOM', 214, 0),
+('DZ', 'Algeria', TRUE, 'DZA', 12, 0),
+
+('EC', 'Ecuador', TRUE, 'ECU', 218, 0),
+('EE', 'Estonia', TRUE, 'EST', 233, 0),
+('EG', 'Egypt', TRUE, 'EGY', 818, 0),
+('EH', 'Western Sahara', TRUE, 'ESH', 732, 0),
+('ER', 'Eritrea', TRUE, 'ERI', 232, 0),
+('ES', 'Spain', TRUE, 'ESP', 724, 0),
+('ET', 'Ethiopia', TRUE, 'ETH', 231, 0),
+
+('FI', 'Finland', TRUE, 'FIN', 246, 0),
+('FJ', 'Fiji', TRUE, 'FJI', 242, 0),
+('FK', 'Falkland Islands', TRUE, 'FLK', 238, 0),
+('FM', 'Micronesia (Federated States of)', TRUE, 'FSM', 583, 0),
+('FO', 'Faroe Islands', TRUE, 'FRO', 234, 0),
+('FR', 'France', TRUE, 'FRA', 250, 0),
+
+('GA', 'Gabon', TRUE, 'GAB', 266, 0),
+('GB', 'United Kingdom', TRUE, 'GBR', 826, 0),
+('GD', 'Grenada', TRUE, 'GRD', 308, 0),
+('GE', 'Georgia', TRUE, 'GEO', 268, 0),
+('GF', 'French Guiana', TRUE, 'GUF', 254, 0),
+('GG', 'Guernsey', TRUE, 'GGY', 831, 0),
+('GH', 'Ghana', TRUE, 'GHA', 288, 0),
+('GI', 'Gibraltar', TRUE, 'GIB', 292, 0),
+('GL', 'Greenland', TRUE, 'GRL', 304, 0),
+('GM', 'Gambia', TRUE, 'GMB', 270, 0),
+('GN', 'Guinea', TRUE, 'GIN', 324, 0),
+('GP', 'Guadeloupe', TRUE, 'GLP', 312, 0),
+('GQ', 'Equatorial Guinea', TRUE, 'GNQ', 226, 0),
+('GR', 'Greece', TRUE, 'GRC', 300, 0),
+('GS', 'South Georgia and South Sandwich Islands', TRUE, 'SGS', 239, 0),
+('GT', 'Guatemala', TRUE, 'GTM', 320, 0),
+('GU', 'Guam', TRUE, 'GUM', 316, 0),
+('GW', 'Guinea-Bissau', TRUE, 'GNB', 624, 0),
+('GY', 'Guyana', TRUE, 'GUY', 328, 0),
+
+('HK', 'Hong Kong', TRUE, 'HKG', 344, 0),
+('HM', 'Heard Island and McDonald Islands', TRUE, 'HMD', 334, 0),
+('HN', 'Honduras', TRUE, 'HND', 340, 0),
+('HR', 'Croatia', TRUE, 'HRV', 191, 0),
+('HT', 'Haiti', TRUE, 'HTI', 332, 0),
+('HU', 'Hungary', TRUE, 'HUN', 348, 0),
+
+('ID', 'Indonesia', TRUE, 'IDN', 360, 0),
+('IE', 'Ireland', TRUE, 'IRL', 372, 0),
+('IL', 'Israel', TRUE, 'ISR', 376, 0),
+('IM', 'Isle of Man', TRUE, 'IMN', 833, 0),
+('IN', 'India', TRUE, 'IND', 356, 0),
+('IO', 'British Indian Ocean Territory', TRUE, 'IOT', 86, 0),
+('IQ', 'Iraq', TRUE, 'IRQ', 368, 0),
+('IR', 'Iran (Islamic Republic of)', TRUE, 'IRN', 364, 0),
+('IS', 'Iceland', TRUE, 'ISL', 352, 0),
+('IT', 'Italy', TRUE, 'ITA', 380, 0),
+
+('JE', 'Jersey', TRUE, 'JEY', 832, 0),
+('JM', 'Jamaica', TRUE, 'JAM', 388, 0),
+('JO', 'Jordan', TRUE, 'JOR', 400, 0),
+('JP', 'Japan', TRUE, 'JPN', 392, 0),
+
+('KE', 'Kenya', TRUE, 'KEN', 404, 0),
+('KG', 'Kyrgyzstan', TRUE, 'KGZ', 417, 0),
+('KH', 'Cambodia', TRUE, 'KHM', 116, 0),
+('KI', 'Kiribati', TRUE, 'KIR', 296, 0),
+('KM', 'Comoros', TRUE, 'COM', 174, 0),
+('KN', 'Saint Kitts and Nevis', TRUE, 'KNA', 659, 0),
+('KP', 'Korea (Democratic People\'s Republic of)', TRUE, 'PRK', 408, 0),
+('KR', 'Korea, Republic of', TRUE, 'KOR', 410, 0),
+('KW', 'Kuwait', TRUE, 'KWT', 414, 0),
+('KY', 'Cayman Islands', TRUE, 'CYM', 136, 0),
+('KZ', 'Kazakhstan', TRUE, 'KAZ', 398, 0),
+
+('LA', 'Lao People\'s Democratic Republic', TRUE, 'LAO', 418, 0),
+('LB', 'Lebanon', TRUE, 'LBN', 422, 0),
+('LC', 'Saint Lucia', TRUE, 'LCA', 662, 0),
+('LI', 'Liechtenstein', TRUE, 'LIE', 438, 0),
+('LK', 'Sri Lanka', TRUE, 'LKA', 144, 0),
+('LR', 'Liberia', TRUE, 'LBR', 430, 0),
+('LS', 'Lesotho', TRUE, 'LSO', 426, 0),
+('LT', 'Lithuania', TRUE, 'LTU', 440, 0),
+('LU', 'Luxembourg', TRUE, 'LUX', 442, 0),
+('LV', 'Latvia', TRUE, 'LVA', 428, 0),
+('LY', 'Libya', TRUE, 'LBY', 434, 0),
+
+('MA', 'Morocco', TRUE, 'MAR', 504, 0),
+('MC', 'Monaco', TRUE, 'MCO', 492, 0),
+('MD', 'Moldova, Republic of', TRUE, 'MDA', 498, 0),
+('ME', 'Montenegro', TRUE, 'MNE', 499, 0),
+('MF', 'Saint Martin (French part)', TRUE, 'MAF', 663, 0),
+('MG', 'Madagascar', TRUE, 'MDG', 450, 0),
+('MH', 'Marshall Islands', TRUE, 'MHL', 584, 0),
+('MK', 'North Macedonia', TRUE, 'MKD', 807, 0),
+('ML', 'Mali', TRUE, 'MLI', 466, 0),
+('MM', 'Myanmar', TRUE, 'MMR', 104, 0),
+('MN', 'Mongolia', TRUE, 'MNG', 496, 0),
+('MO', 'Macao', TRUE, 'MAC', 446, 0),
+('MP', 'Northern Mariana Islands', TRUE, 'MNP', 580, 0),
+('MQ', 'Martinique', TRUE, 'MTQ', 474, 0),
+('MR', 'Mauritania', TRUE, 'MRT', 478, 0),
+('MS', 'Montserrat', TRUE, 'MSR', 500, 0),
+('MT', 'Malta', TRUE, 'MLT', 470, 0),
+('MU', 'Mauritius', TRUE, 'MUS', 480, 0),
+('MV', 'Maldives', TRUE, 'MDV', 462, 0),
+('MW', 'Malawi', TRUE, 'MWI', 454, 0),
+('MX', 'Mexico', TRUE, 'MEX', 484, 0),
+('MY', 'Malaysia', TRUE, 'MYS', 458, 0),
+('MZ', 'Mozambique', TRUE, 'MOZ', 508, 0),
+
+('NA', 'Namibia', TRUE, 'NAM', 516, 0),
+('NC', 'New Caledonia', TRUE, 'NCL', 540, 0),
+('NE', 'Niger', TRUE, 'NER', 562, 0),
+('NF', 'Norfolk Island', TRUE, 'NFK', 574, 0),
+('NG', 'Nigeria', TRUE, 'NGA', 566, 0),
+('NI', 'Nicaragua', TRUE, 'NIC', 558, 0),
+('NL', 'Netherlands', TRUE, 'NLD', 528, 0),
+('NO', 'Norway', TRUE, 'NOR', 578, 0),
+('NP', 'Nepal', TRUE, 'NPL', 524, 0),
+('NR', 'Nauru', TRUE, 'NRU', 520, 0),
+('NU', 'Niue', TRUE, 'NIU', 570, 0),
+('NZ', 'New Zealand', TRUE, 'NZL', 554, 0),
+
+('OM', 'Oman', TRUE, 'OMN', 512, 0),
+
+('PA', 'Panama', TRUE, 'PAN', 591, 0),
+('PE', 'Peru', TRUE, 'PER', 604, 0),
+('PF', 'French Polynesia', TRUE, 'PYF', 258, 0),
+('PG', 'Papua New Guinea', TRUE, 'PNG', 598, 0),
+('PH', 'Philippines', TRUE, 'PHL', 608, 0),
+('PK', 'Pakistan', TRUE, 'PAK', 586, 0),
+('PL', 'Poland', TRUE, 'POL', 616, 0),
+('PM', 'Saint Pierre and Miquelon', TRUE, 'SPM', 666, 0),
+('PN', 'Pitcairn', TRUE, 'PCN', 612, 0),
+('PR', 'Puerto Rico', TRUE, 'PRI', 630, 0),
+('PS', 'Palestine, State of', TRUE, 'PSE', 275, 0),
+('PT', 'Portugal', TRUE, 'PRT', 620, 0),
+('PW', 'Palau', TRUE, 'PLW', 585, 0),
+('PY', 'Paraguay', TRUE, 'PRY', 600, 0),
+
+('QA', 'Qatar', TRUE, 'QAT', 634, 0),
+
+('RE', 'Réunion', TRUE, 'REU', 638, 0),
+('RO', 'Romania', TRUE, 'ROU', 642, 0),
+('RS', 'Serbia', TRUE, 'SRB', 688, 0),
+('RU', 'Russian Federation', TRUE, 'RUS', 643, 0),
+('RW', 'Rwanda', TRUE, 'RWA', 646, 0),
+
+('SA', 'Saudi Arabia', TRUE, 'SAU', 682, 0),
+('SB', 'Solomon Islands', TRUE, 'SLB', 90, 0),
+('SC', 'Seychelles', TRUE, 'SYC', 690, 0),
+('SD', 'Sudan', TRUE, 'SDN', 729, 0),
+('SE', 'Sweden', TRUE, 'SWE', 752, 0),
+('SG', 'Singapore', TRUE, 'SGP', 702, 0),
+('SH', 'Saint Helena, Ascension and Tristan da Cunha', TRUE, 'SHN', 654, 0),
+('SI', 'Slovenia', TRUE, 'SVN', 705, 0),
+('SJ', 'Svalbard and Jan Mayen', TRUE, 'SJM', 744, 0),
+('SK', 'Slovakia', TRUE, 'SVK', 703, 0),
+('SL', 'Sierra Leone', TRUE, 'SLE', 694, 0),
+('SM', 'San Marino', TRUE, 'SMR', 674, 0),
+('SN', 'Senegal', TRUE, 'SEN', 686, 0),
+('SO', 'Somalia', TRUE, 'SOM', 706, 0),
+('SR', 'Suriname', TRUE, 'SUR', 740, 0),
+('SS', 'South Sudan', TRUE, 'SSD', 728, 0),
+('ST', 'Sao Tome and Principe', TRUE, 'STP', 678, 0),
+('SV', 'El Salvador', TRUE, 'SLV', 222, 0),
+('SX', 'Sint Maarten (Dutch part)', TRUE, 'SXM', 534, 0),
+('SY', 'Syrian Arab Republic', TRUE, 'SYR', 760, 0),
+('SZ', 'Eswatini', TRUE, 'SWZ', 748, 0),
+
+('TC', 'Turks and Caicos Islands', TRUE, 'TCA', 796, 0),
+('TD', 'Chad', TRUE, 'TCD', 148, 0),
+('TF', 'French Southern Territories', TRUE, 'ATF', 260, 0),
+('TG', 'Togo', TRUE, 'TGO', 768, 0),
+('TH', 'Thailand', TRUE, 'THA', 764, 0),
+('TJ', 'Tajikistan', TRUE, 'TJK', 762, 0),
+('TK', 'Tokelau', TRUE, 'TKL', 772, 0),
+('TL', 'Timor-Leste', TRUE, 'TLS', 626, 0),
+('TM', 'Turkmenistan', TRUE, 'TKM', 795, 0),
+('TN', 'Tunisia', TRUE, 'TUN', 788, 0),
+('TO', 'Tonga', TRUE, 'TON', 776, 0),
+('TR', 'Türkiye', TRUE, 'TUR', 792, 0),
+('TT', 'Trinidad and Tobago', TRUE, 'TTO', 780, 0),
+('TV', 'Tuvalu', TRUE, 'TUV', 798, 0),
+('TW', 'Taiwan, Province of China', TRUE, 'TWN', 158, 0),
+('TZ', 'Tanzania, United Republic of', TRUE, 'TZA', 834, 0),
+
+('UA', 'Ukraine', TRUE, 'UKR', 804, 0),
+('UG', 'Uganda', TRUE, 'UGA', 800, 0),
+('UM', 'United States Minor Outlying Islands', TRUE, 'UMI', 581, 0),
+('US', 'United States of America', TRUE, 'USA', 840, 0),
+('UY', 'Uruguay', TRUE, 'URY', 858, 0),
+('UZ', 'Uzbekistan', TRUE, 'UZB', 860, 0),
+
+('VA', 'Holy See', TRUE, 'VAT', 336, 0),
+('VC', 'Saint Vincent and the Grenadines', TRUE, 'VCT', 670, 0),
+('VE', 'Venezuela (Bolivarian Republic of)', TRUE, 'VEN', 862, 0),
+('VG', 'Virgin Islands (British)', TRUE, 'VGB', 92, 0),
+('VI', 'Virgin Islands (U.S.)', TRUE, 'VIR', 850, 0),
+('VN', 'Viet Nam', TRUE, 'VNM', 704, 0),
+('VU', 'Vanuatu', TRUE, 'VUT', 548, 0),
+
+('WF', 'Wallis and Futuna', TRUE, 'WLF', 876, 0),
+('WS', 'Samoa', TRUE, 'WSM', 882, 0),
+
+('YE', 'Yemen', TRUE, 'YEM', 887, 0),
+('YT', 'Mayotte', TRUE, 'MYT', 175, 0),
+
+('ZA', 'South Africa', TRUE, 'ZAF', 710, 0),
+('ZM', 'Zambia', TRUE, 'ZMB', 894, 0),
+('ZW', 'Zimbabwe', TRUE, 'ZWE', 716, 0);
+
+    
+INSERT INTO addresses (user_id, recipient_name, house_number, address_line_one, address_line_two, city, county, postcode, country_code, country_phone_code, phone_number, is_default_shipping_address, is_default_billing_address)
+VALUES
+	(1, 'Tilly Register', 27, 'Penlock Road', NULL, 'Wolverhampton', 'West Midlands', 'WV11 4HP', 'GB', 1, 3094555873, FALSE, FALSE),
+    (2, 'Jane Plain', 11, 'Ocean Way', NULL, 'Stafford', 'Staffordshire', 'ST16 8UD', 'GB', 44, '7762398615', FALSE, FALSE),
+    (3, 'Holly Bush', 9, 'Tipple Drive', NULL, 'Devon', 'Devonshire', 'EX39 6VR', 'GB', 7, 8555924671, FALSE, FALSE), 
+    (4, 'Alaska Bake', 96, 'Groove Street', NULL, 'Wednesbury', 'West Midlands', 'WS10 9TS', 'GB', 36, 306598667, FALSE, FALSE),
+    (5, 'Billy Thekid', 10, 'Downing Street', 'Westminster', 'London', 'Greater London', 'SW1A 2AA','GB', 36, 706598667, FALSE, FALSE);
+    
+INSERT INTO currencies (currency_code, currency_name, symbol, is_active)
+VALUES
+	('GBP', 'Pound Sterling', '£', TRUE), 
+    ('USD', 'US Dollar', '$', TRUE),
+    ('EUR', 'Euro', '€', TRUE),
+    ('RUB', 'Russian Ruble', '₽', TRUE),
+    ('SLE', 'Leone', NULL, TRUE)
+ON DUPLICATE KEY UPDATE currency_name = VALUES(currency_name);
+   
+ INSERT INTO payment_providers (provider_id, provider_key, display_name, logo_url)
+ VALUES
+	(1, 'paypal', 'PayPal', NULL),
+    (2, 'amex', 'American Express', NULL),
+    (3, 'visa', 'Visa', NULL),
+    (4, 'mastercard', 'Mastercard', NULL),
+    (5, 'affirm', 'Affirm', NULL);
+    
+INSERT INTO brands (brand_name, slug, is_active)
+VALUES
+	('IronForge Fitness', 'ironforge-fitness', 1),
+	('FlexCore Gear', 'flexcore-gear', 1),
+	('ZenFlow Active', 'zenflow-active', 1),
+	('GravityGrip', 'gravitygrip', 1),
+	('AeroBurn Athletics', 'aeroburn-athletics', 1),
+	('LunaFit Apparel', 'lunafit-apparel', 1),
+	('TorqueWear', 'torquewear', 1),
+	('CorePulse Performance', 'corepulse-performance', 1),
+	('StrideMax Sports', 'stridemax-sports', 1),
+	('SilhouetteFit', 'silhouettefit', 1),
+	('PureBulk Labs', 'purebulk-labs', 1),
+	('IgniteFuel Nutrition', 'ignitefuel-nutrition', 1),
+	('MaxCharge Labs', 'maxcharge-labs', 1),
+	('GreenLean Nutrition', 'greenlean-nutrition', 1),
+	('TrailBite Energy', 'trailbite-energy', 1),
+	('StormPack Gear', 'stormpack-gear', 1),
+	('HydraPeak', 'hydrapeak', 1),
+	('SyncMotion Tech', 'syncmotion-tech', 1),
+	('BeatShield Audio', 'beatshield-audio', 1),
+	('GripBand Active', 'gripband-active', 1),
+	('PulseRelief Pro', 'pulserelief-pro', 1),
+	('RollFlex Recovery', 'rollflex-recovery', 1),
+	('SootheForce', 'sootheforce', 1),
+	('ThermaFlex', 'thermaflex', 1),
+	('CalmNest Naturals', 'calmnest-naturals', 1);
+
+INSERT INTO categories (category_id, category_name, slug, is_active)
+VALUES 
+-- PARENT CATEGORIES
+	(1, 'Gym Equipment', 'gym-equipment', TRUE),
+	(2, 'Gym Apparel', 'gym-apparel', TRUE),
+	(3, 'Nutrition & Supplements', 'nutrition-and-supplements', TRUE),
+	(4, 'Accessories', 'accessories', TRUE),
+	(5, 'Recovery & Wellness', 'recovery-and-wellness', TRUE);
+
+-- Gym Equipment Subcategories
+INSERT INTO categories (category_id, category_name, slug, parent_id, is_active)
+VALUES
+-- SUBCATEGORIES
+	(6, 'Adjustable Dumbbells', 'adjustable-dumbbells', 1, TRUE),
+	(7, 'Resistance Bands', 'resistance-bands', 1, TRUE),
+	(8, 'Yoga Mats', 'yoga-mats', 1, TRUE),
+	(9, 'Kettlebells', 'kettlebells', 1, TRUE),
+	(10, 'Jump Ropes', 'jump-ropes', 1, TRUE),
+	(11, 'Women Hoodies', 'women-hoodies', 2, TRUE),
+	(12, 'Men Joggers', 'men-joggers', 2, TRUE),
+	(13, 'Men Compression Wear', 'compression-tops-men', 2, TRUE),
+	(14, 'Sports Socks', 'sports-socks', 2, TRUE),
+	(15, 'Women Leggings', 'women-leggings', 2, TRUE),
+	(16, 'Protein Powders', 'protein-powders', 3, TRUE),
+	(17, 'Pre-Workout', 'pre-workout', 3, TRUE),
+	(18, 'Creatine', 'creatine', 3, TRUE),
+	(19, 'Vegan Products', 'vegan-products', 3, TRUE),
+	(20, 'Energy Snacks', 'energy-snacks', 3, TRUE),
+	(21, 'Gym Bags', 'gym-bags', 4, TRUE),
+	(22, 'Water Bottles', 'water-bottles', 4, TRUE),
+	(23, 'Fitness Watches', 'fitness-watches', 4, TRUE),
+	(24, 'Headphones', 'headphones', 4, TRUE),
+	(25, 'Phone Holders', 'phone-holders', 4, TRUE),
+	(26, 'Massage Tools', 'massage-tools', 5, TRUE),
+	(27, 'Foam Rollers', 'foam-rollers', 5, TRUE),
+	(28, 'Relief Balms', 'relief-balms', 5, TRUE),
+	(29, 'Gel Packs', 'gel-packs', 5, TRUE),
+	(30, 'Sleep & Relaxation Teas', 'sleep-relaxation-teas', 5, TRUE);
+
+INSERT INTO products (product_id, product_name, brand_id, product_description, is_active)
+VALUES
+	(1, 'Adjustable Dumbbell Set', 1, 'Durable adjustable dumbbells designed for customizable strength training sessions.', TRUE),
+	(2, 'Resistance Band Set', 2, 'A complete set of resistance bands ideal for strength, mobility, and rehabilitation exercises.', TRUE),
+	(3, 'Yoga Mat', 3, 'Non-slip, cushioned yoga mat offering comfort and stability for all floor workouts.', TRUE),
+	(4, 'Kettlebell (Door Frame Mount)', 4, 'Innovative kettlebell system that mounts to the door frame for versatile home workouts.', TRUE),
+	(5, 'Weighted Jump Rope (Adjustable)', 5, 'Adjustable weighted jump rope for cardio, endurance, and high-intensity training.',	TRUE),
+	(6, 'Women’s Zip Up Hoodie', 6, 'Soft, lightweight zip-up hoodie designed for performance, comfort, and warmth.', TRUE),
+	(7, 'Men’s Athletic Joggers', 7, 'Breathable, flexible athletic joggers built for training and everyday wear.', TRUE),
+	(8, 'Men’s Compression Tops', 8, 'High-performance compression top that enhances circulation and muscle support.', TRUE),
+	(9, 'Sports Socks', 9, 'Moisture-wicking sports socks providing cushioning and all-day comfort.', TRUE),
+	(10, 'Women’s Seamless Leggings (High Waist)', 10, 'High-waisted seamless leggings offering exceptional stretch, comfort, and shaping.', TRUE),
+	(11, 'Whey Protein', 11, 'Premium whey protein powder formulated for muscle recovery and lean growth.', TRUE),
+	(12, 'Pre-Workout Powder', 12, 'High-energy pre-workout blend designed to boost focus, endurance, and performance.', TRUE),
+	(13, 'Creatine Monohydrate', 13, 'Pure creatine monohydrate powder to improve power, strength, and muscle output.', TRUE),
+	(14, 'Vegan Protein Shake', 14, 'Plant-based protein shake made from clean ingredients for a smooth, nutritious boost.', TRUE),
+	(15, 'Energy Bars', 15, 'Healthy energy bars packed with natural ingredients to fuel workouts and daily activity.', TRUE),
+	(16, 'Gym Bag (Water Resistant)', 16, 'Spacious water-resistant gym bag with multiple compartments for organized storage.', TRUE),
+	(17, 'Water Bottle', 17, 'Durable reusable water bottle designed to keep beverages cold for extended periods.', TRUE),
+	(18, 'Smart Fitness Watch', 18, 'Advanced fitness watch that monitors health metrics, activity levels, and workouts.', TRUE),
+	(19, 'Sweat Proof Headphones', 19, 'Wireless sweat-proof headphones engineered for secure and comfortable workouts.', TRUE),
+    (20, 'Phone Armband Holder', 20, 'Flexible and secure phone armband holder ideal for running and fitness training.', TRUE),
+	(21, 'Massage Gun', 21, 'Powerful handheld massage gun designed to relieve muscle tension and boost recovery.', TRUE),
+	(22, 'Foam Roller', 22, 'High-density foam roller perfect for muscle release, stretching, and mobility work.', TRUE),
+	(23, 'Muscle Relief Balm', 23, 'Cooling muscle relief balm that soothes soreness and promotes recovery.', TRUE),
+	(24, 'Hot/Cold Gel Pack', 24, 'Reusable hot/cold gel pack designed for injury relief and recovery therapy.', TRUE),
+	(25, 'Sleep Support Herbal Tea', 25, 'Relaxing herbal tea blend formulated to promote calmness and restful sleep.', TRUE);
+
+INSERT INTO product_category (product_id, category_id)
+VALUES
+	(1, 6), 
+	(2, 7), 
+	(3, 8),
+	(4, 9),
+	(5, 10),
+	(6, 11),
+	(7, 12),
+	(8, 13),
+	(9, 14),
+	(10, 15),
+	(11, 16),
+	(12, 17),
+	(13, 18),
+	(14, 19),
+	(15, 20),
+	(16, 21),
+	(17, 22),
+	(18, 23),
+	(19, 24),
+	(20, 25),
+	(21, 26),
+	(22, 27),
+	(23, 28),
+	(24, 29),
+	(25, 30);
+
+
+
+INSERT INTO variant_attributes (attribute_name, display_name, selection_order, is_active)
+VALUES
+    ('size', 'Size', 1, TRUE),
+    ('colour', 'Colour', 2, TRUE),
+    ('flavour', 'Flavour', 3, TRUE),
+    ('volume', 'Volume', 4, TRUE),
+    ('weight', 'Weight', 5, TRUE),
+    ('length', 'Length', 6, TRUE),
+    ('pack_size', 'Pack Size', 7, TRUE);
+    
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (1, 'XS', 'XS', 1, TRUE),
+    (1, 'S',  'Small', 2, TRUE),
+    (1, 'M',  'Medium', 3, TRUE),
+    (1, 'L',  'Large', 4, TRUE),
+    (1, 'XL', 'XL', 5, TRUE);
+
+
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (2, 'black',  'Black', 1, TRUE),
+    (2, 'grey',   'Grey', 2, TRUE),
+    (2, 'navy',   'Navy', 3, TRUE),
+    (2, 'red',    'Red', 4, TRUE),
+    (2, 'blue',   'Blue', 5, TRUE),
+    (2, 'green',  'Green', 6, TRUE),
+    (2, 'purple', 'Purple', 7, TRUE),
+    (2, 'white',  'White', 8, TRUE);
+
+
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (3, 'chocolate',   'Chocolate', 1, TRUE),
+    (3, 'vanilla',     'Vanilla', 2, TRUE),
+    (3, 'strawberry',  'Strawberry', 3, TRUE),
+    (3, 'banana',      'Banana', 4, TRUE),
+    (3, 'berry',       'Berry Mix', 5, TRUE),
+    (3, 'unflavoured', 'Unflavoured', 6, TRUE);
+
+
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (4, '500ml', '500 ml', 1, TRUE),
+    (4, '600ml', '600 ml', 2, TRUE),
+    (4, '750ml', '750 ml', 3, TRUE),
+    (4, '1l',    '1 L',    4, TRUE),
+    (4, '50ml',  '50 ml',  5, TRUE),
+    (4, '100ml', '100 ml', 6, TRUE);
+
+
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (5, '20kg_set', '20 kg Set', 1, TRUE),
+    (5, '30kg_set', '30 kg Set', 2, TRUE),
+    (5, '40kg_set', '40 kg Set', 3, TRUE),
+    (5, '8kg',   '8 kg',   4, TRUE),
+    (5, '12kg',  '12 kg',  5, TRUE),
+    (5, '16kg',  '16 kg',  6, TRUE),
+    (5, '20kg',  '20 kg',  7, TRUE),
+    (5, '0.5kg', '0.5 kg', 8, TRUE),
+    (5, '1kg',   '1 kg',   9, TRUE);
+
+
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (6, '173cm', '173 cm', 1, TRUE),
+    (6, '183cm', '183 cm', 2, TRUE),
+    (6, '2.6m', '2.6 m', 3, TRUE),
+    (6, '2.8m', '2.8 m', 4, TRUE),
+    (6, '3.0m', '3.0 m', 5, TRUE),
+    (6, '30cm', '30 cm', 6, TRUE),
+    (6, '45cm', '45 cm', 7, TRUE),
+    (6, '60cm', '60 cm', 8, TRUE);
+    
+INSERT INTO variant_options (attribute_id, variant_value, display_value, sort_order, is_active)
+VALUES
+    (7, '6', 'Pack of 6', 1, TRUE),
+    (7, '12', 'Pack of 12', 2, TRUE),
+    (7, '10', 'Pack of 10', 3, TRUE), 
+    (7, '1', 'Single Pack', 4, TRUE),
+    (7, '2', 'Pack of 2', 5, TRUE),
+    (7, '20', 'Pack of 20', 6, TRUE),
+    (7, '40', 'Pack of 40', 7, TRUE);
+
+
+INSERT INTO product_variants (product_id, sku, stock_quantity, barcode, title, options_key, is_active)
+VALUES
+    (1, 'ADJDB-20KG', 0, NULL, 'Adjustable Dumbbell Set - 20 kg Set', 'weight:20kg_set', TRUE),
+    (1, 'ADJDB-30KG', 0, NULL, 'Adjustable Dumbbell Set - 30 kg Set', 'weight:30kg_set', TRUE),
+    (2, 'RESBND-PCK6', 0, NULL, 'Resistance Band Set - Pack of 6', 'pack_size:6', TRUE),
+    (2, 'RESBND-PCK12', 0, NULL, 'Resistance Band Set - Pack of 12', 'pack_size:12', TRUE),
+    (3, 'YOGMAT-BLK-173', 0, NULL, 'Yoga Mat - Black / 173 cm', 'colour:black;length:173cm', TRUE),
+    (3, 'YOGMAT-BLU-183', 0, NULL, 'Yoga Mat - Blue / 183 cm', 'colour:blue;length:183cm', TRUE),
+    (4, 'KETDF-8KG', 0, NULL, 'Kettlebell (Door Frame Mount) - 8 kg', 'weight:8kg', TRUE),
+    (4, 'KETDF-12KG', 0, NULL, 'Kettlebell (Door Frame Mount) - 12 kg', 'weight:12kg', TRUE),
+    (5, 'WJROPE-2_6M', 0, NULL, 'Weighted Jump Rope (Adjustable) - 2.6 m', 'length:2.6m', TRUE),
+    (5, 'WJROPE-2_8M', 0, NULL, 'Weighted Jump Rope (Adjustable) - 2.8 m', 'length:2.8m', TRUE),
+    (6, 'WZIPHD-BLK-S', 0, NULL, 'Women''s Zip Up Hoodie - Black / S', 'colour:black;size:S', TRUE),
+    (6, 'WZIPHD-BLK-M', 0, NULL, 'Women''s Zip Up Hoodie - Black / M', 'colour:black;size:M', TRUE),
+    (6, 'WZIPHD-BLK-L', 0, NULL, 'Women''s Zip Up Hoodie - Black / L', 'colour:black;size:L', TRUE),
+    (7, 'MAJOG-GRY-S', 0, NULL, 'Men''s Athletic Joggers - Grey / S', 'colour:grey;size:S', TRUE),
+    (7, 'MAJOG-GRY-M', 0, NULL, 'Men''s Athletic Joggers - Grey / M', 'colour:grey;size:M', TRUE),
+    (7, 'MAJOG-GRY-L', 0, NULL, 'Men''s Athletic Joggers - Grey / L', 'colour:grey;size:L', TRUE),
+    (8, 'MCOMP-NVY-S', 0, NULL, 'Men''s Compression Tops - Navy / S', 'colour:navy;size:S', TRUE),
+    (8, 'MCOMP-NVY-M', 0, NULL, 'Men''s Compression Tops - Navy / M', 'colour:navy;size:M', TRUE),
+    (8, 'MCOMP-NVY-L', 0, NULL, 'Men''s Compression Tops - Navy / L', 'colour:navy;size:L', TRUE),
+    (9, 'SSOCK-WHT-M', 0, NULL, 'Sports Socks - White / M', 'colour:white;size:M', TRUE),
+    (9, 'SSOCK-WHT-L', 0, NULL, 'Sports Socks - White / L', 'colour:white;size:L', TRUE),
+    (10, 'WLEG-BLK-S', 0, NULL, 'Women''s Seamless Leggings (High Waist) - Black / S', 'colour:black;size:S', TRUE),
+    (10, 'WLEG-BLK-M', 0, NULL, 'Women''s Seamless Leggings (High Waist) - Black / M', 'colour:black;size:M', TRUE),
+    (10, 'WLEG-BLK-L', 0, NULL, 'Women''s Seamless Leggings (High Waist) - Black / L', 'colour:black;size:L', TRUE),
+    (11, 'WHEY-CHOC', 0, NULL, 'Whey Protein - Chocolate', 'flavour:chocolate', TRUE),
+    (11, 'WHEY-VAN', 0, NULL, 'Whey Protein - Vanilla', 'flavour:vanilla', TRUE),
+    (12, 'PREW-BER', 0, NULL, 'Pre-Workout Powder - Berry Mix', 'flavour:berry', TRUE),
+    (12, 'PREW-UNFLAV', 0, NULL, 'Pre-Workout Powder - Unflavoured', 'flavour:unflavoured', TRUE),
+    (13, 'CREA-STD', 0, NULL, 'Creatine Monohydrate - Standard', NULL, TRUE),
+    (14, 'VPROT-CHOC', 0, NULL, 'Vegan Protein Shake - Chocolate', 'flavour:chocolate', TRUE),
+    (14, 'VPROT-VAN', 0, NULL, 'Vegan Protein Shake - Vanilla', 'flavour:vanilla', TRUE),
+    (15, 'ENBAR-CHOC-12', 0, NULL, 'Energy Bars - Chocolate / Pack of 12', 'flavour:chocolate;pack_size:12', TRUE),
+    (15, 'ENBAR-BER-12', 0, NULL, 'Energy Bars - Berry Mix / Pack of 12', 'flavour:berry;pack_size:12', TRUE),
+    (16, 'GYMBAG-BLK', 0, NULL, 'Gym Bag (Water Resistant) - Black', 'colour:black', TRUE),
+    (16, 'GYMBAG-BLU', 0, NULL, 'Gym Bag (Water Resistant) - Blue', 'colour:blue', TRUE),
+    (17, 'WBOTT-BLK-500', 0, NULL, 'Water Bottle - Black / 500 ml', 'colour:black;volume:500ml', TRUE),
+    (17, 'WBOTT-BLU-750', 0, NULL, 'Water Bottle - Blue / 750 ml', 'colour:blue;volume:750ml', TRUE),
+    (18, 'SFWATCH-BLK', 0, NULL, 'Smart Fitness Watch - Black', 'colour:black', TRUE),
+    (18, 'SFWATCH-WHT', 0, NULL, 'Smart Fitness Watch - White', 'colour:white', TRUE),
+    (19, 'SPHEAD-BLK', 0, NULL, 'Sweat Proof Headphones - Black', 'colour:black', TRUE),
+    (19, 'SPHEAD-BLU', 0, NULL, 'Sweat Proof Headphones - Blue', 'colour:blue', TRUE),
+    (20, 'PABAND-BLK-M', 0, NULL, 'Phone Armband Holder - Black / M', 'colour:black;size:M', TRUE),
+    (20, 'PABAND-BLK-L', 0, NULL, 'Phone Armband Holder - Black / L', 'colour:black;size:L', TRUE),
+    (21, 'MASSG-BLK', 0, NULL, 'Massage Gun - Black', 'colour:black', TRUE),
+    (22, 'FROLLER-45', 0, NULL, 'Foam Roller - 45 cm', 'length:45cm', TRUE),
+    (22, 'FROLLER-60', 0, NULL, 'Foam Roller - 60 cm', 'length:60cm', TRUE),
+    (23, 'MRBALM-50', 0, NULL, 'Muscle Relief Balm - 50 ml', 'volume:50ml', TRUE),
+    (23, 'MRBALM-100', 0, NULL, 'Muscle Relief Balm - 100 ml', 'volume:100ml', TRUE),
+    (24, 'HCGEL-SINGLE', 0, NULL, 'Hot/Cold Gel Pack - Single Pack', 'pack_size:1', TRUE),
+    (24, 'HCGEL-PCK2', 0, NULL, 'Hot/Cold Gel Pack - Pack of 2', 'pack_size:2', TRUE),
+    (25, 'SLTEA-20', 0, NULL, 'Sleep Support Herbal Tea - 20 Bags', 'pack_size:20', TRUE),
+    (25, 'SLTEA-40', 0, NULL, 'Sleep Support Herbal Tea - 40 Bags', 'pack_size:40', TRUE);
+    
+
+
+
+INSERT INTO variant_combinations (variant_id, option_id)
+VALUES
+	(1, 26),
+	(2, 27),
+	(3, 43),
+	(4, 44),
+	(5, 6),
+	(5, 35),
+	(6, 10),
+	(6, 36),
+	(7, 29),
+	(8, 30),
+	(9, 37),
+	(10, 38),
+	(11, 6),
+	(11, 2),
+	(12, 6),
+	(12, 3),
+	(13, 6),
+	(13, 4),
+	(14, 7), 
+    (14, 2),
+	(15, 7),
+    (15, 3),
+	(16, 7),
+    (16, 4),
+	(17, 8),
+    (17, 2),
+	(18, 8),
+    (18, 3),
+	(19, 8),
+    (19, 4),
+	(20, 13),
+    (20, 3),
+	(21, 13),
+    (21, 4),
+	(22, 6),
+    (22, 2),
+	(23, 6),
+    (23, 3),
+	(24, 6),
+    (24, 4),
+	(25, 14),
+	(26, 15),
+	(27, 18),
+	(28, 19),
+	(30, 14),
+	(31, 15),
+	(32, 14),
+    (32, 44),
+	(33, 18),
+    (33, 44),
+	(34, 6),
+	(35, 10),
+	(36, 6),
+    (36, 20),
+	(37, 10),
+    (37, 22),
+	(38, 6),
+	(39, 13),
+	(40, 6),
+	(41, 10),
+	(42, 6),
+    (42, 3),
+	(43, 6),
+    (43, 4),
+	(44, 6),
+	(45, 41),
+	(46, 42),
+	(47, 24),
+	(48, 25),
+	(49, 46),
+	(50, 47),
+	(51, 48),
+	(52, 49);
+
+
+INSERT INTO variant_currency_prices (variant_id, currency_code, price_penny, was_price_penny)
+VALUES
+	( 1, 'USD', 5625, 6250),
+	( 2, 'USD', 6875, 7500),
+	( 3, 'USD', 1500, 1875),
+	( 4, 'USD', 2250, 2500),
+	( 5, 'USD', 2250, 2500),
+	( 6, 'USD', 2500, NULL),
+	( 7, 'USD', 2500, 3125),
+	( 8, 'USD', 3250, NULL),
+	( 9, 'USD', 1500, 1875),
+	( 10, 'USD', 1625, 2000),
+	( 11, 'USD', 3125, 3750),
+	( 12, 'USD', 3250, 3750),
+	( 13, 'USD', 3375, 4000),
+	( 14, 'USD', 2750, 3250),
+	( 15, 'USD', 2875, 3250),
+	( 16, 'USD', 3000, 3250),
+	( 17, 'USD', 2250, 2750),
+	( 18, 'USD', 2375, 2750),
+	( 19, 'USD', 2500, 2750),
+	( 20, 'USD', 875, NULL),
+	( 21, 'USD', 1000, NULL),
+	( 22, 'USD', 2750, 3250),
+	( 23, 'USD', 2875, 3250),
+	( 24, 'USD', 3000, 3250),
+	( 25, 'USD', 3125, 3750),
+	( 26, 'USD', 3250, 3750),
+	( 27, 'USD', 2750, 3250),
+	( 28, 'USD', 2500, NULL),
+	( 29, 'USD', 2250, 2500),
+	( 30, 'USD', 2875, 3250),
+	( 31, 'USD', 3000, 3250),
+	( 32, 'USD', 1875, 2250),
+	( 33, 'USD', 1875, 2250),
+	( 34, 'USD', 2500, 3125),
+	( 35, 'USD', 2500, 3125),
+	( 36, 'USD', 1000, NULL),
+	( 37, 'USD', 1250, 1500),
+	( 38, 'USD', 5625, 6250),
+	( 39, 'USD', 5625, 6250),
+	( 40, 'USD', 3750, 4375),
+	( 41, 'USD', 3750, 4375),
+	( 42, 'USD', 1125, NULL),
+	( 43, 'USD', 1125, NULL),
+	( 44, 'USD', 4375, 5000),
+	( 45, 'USD', 1500, NULL),
+	( 46, 'USD', 1875, 2250),
+	( 47, 'USD', 750, NULL),
+	( 48, 'USD', 1125, NULL),
+	( 49, 'USD', 625, NULL),
+	( 50, 'USD', 1125, NULL),
+	( 51, 'USD', 750, NULL),
+	( 52, 'USD', 1125, NULL);
+
+
+
+INSERT INTO variant_currency_prices (variant_id, currency_code, price_penny, was_price_penny)
+VALUES
+	( 1, 'EUR', 5175, 5750),
+	( 2, 'EUR', 6325, 6900),
+	( 3, 'EUR', 1380, 1725),
+	( 4, 'EUR', 2070, 2300),
+	( 5, 'EUR', 2070, 2300),
+	( 6, 'EUR', 2300, NULL),
+	( 7, 'EUR', 2300, 2875),
+	( 8, 'EUR', 2990, NULL),
+	( 9, 'EUR', 1380, 1725),
+	( 10, 'EUR', 1495, 1840),
+	( 11, 'EUR', 2530, 2990),
+	( 12, 'EUR', 2990, 2990),
+	( 13, 'EUR', 3105, 3680),
+	( 14, 'EUR', 2530, 2990),
+	( 15, 'EUR', 2645, 2990),
+	( 16, 'EUR', 2760, 2990),
+	( 17, 'EUR', 2070, 2530),
+	( 18, 'EUR', 2185, 2530),
+	( 19, 'EUR', 2300, 2530),
+	( 20, 'EUR', 805, NULL),
+	( 21, 'EUR', 920, NULL),
+	( 22, 'EUR', 2530, 2990),
+	( 23, 'EUR', 2645, 2990),
+	( 24, 'EUR', 2760, 2990),
+	( 25, 'EUR', 2875, 3450),
+	( 26, 'EUR', 2990, 3450),
+	( 27, 'EUR', 2530, 2990),
+	( 28, 'EUR', 2300, NULL),
+	( 29, 'EUR', 2070, 2300),
+	( 30, 'EUR', 2645, 2990),
+	( 31, 'EUR', 2760, 2990),
+	( 32, 'EUR', 1725, 2070),
+	( 33, 'EUR', 1725, 2070),
+	( 34, 'EUR', 2300, 2875),
+	( 35, 'EUR', 2300, 2875),
+	( 36, 'EUR', 920, NULL),
+	( 37, 'EUR', 1150, 1380),
+	( 38, 'EUR', 5175, 5750),
+	( 39, 'EUR', 5175, 5750),
+	( 40, 'EUR', 3450, 4025),
+	( 41, 'EUR', 3450, 4025),
+	( 42, 'EUR', 1035, NULL),
+	( 43, 'EUR', 1035, NULL),
+	( 44, 'EUR', 4025, 4600),
+	( 45, 'EUR', 1380, NULL),
+	( 46, 'EUR', 1725, 2070),
+	( 47, 'EUR', 690, NULL),
+	( 48, 'EUR', 1035, NULL),
+	( 49, 'EUR', 575, NULL),
+	( 50, 'EUR', 1035, NULL),
+	( 51, 'EUR', 690, NULL),
+	( 52, 'EUR', 1035, NULL);
+
+
+INSERT INTO variant_currency_prices (variant_id, currency_code, price_penny, was_price_penny)
+VALUES
+	(1, 'GBP', 4500, 5000),
+	(2, 'GBP', 5500, 6000),
+	(3, 'GBP', 1200, 1500),
+	(4, 'GBP', 1800, 2000),
+	(5, 'GBP', 1800, 2000),
+	(6, 'GBP', 2000, NULL),
+	(7, 'GBP', 2000, 2500),
+	(8, 'GBP', 2600, NULL),
+	(9, 'GBP', 1200, 1500),
+	(10, 'GBP', 1300, 1600),
+	(11, 'GBP', 2500, 3000),
+	(12, 'GBP', 2600, 3000),
+	(13, 'GBP', 2700, 3200),
+	(14, 'GBP', 2200, 2600),
+	(15, 'GBP', 2300, 2600),
+	(16, 'GBP', 2400, 2600),
+	(17, 'GBP', 1800, 2200),
+	(18, 'GBP', 1900, 2200),
+	(19, 'GBP', 2000, 2200),
+	(20, 'GBP', 700, NULL),
+	(21, 'GBP', 800, NULL),
+	(22, 'GBP', 2200, 2600),
+	(23, 'GBP', 2300, 2600),
+	(24, 'GBP', 2400, 2600),
+	(25, 'GBP', 2500, 3000),
+	(26, 'GBP', 2600, 3000),
+	(27, 'GBP', 2200, 2600),
+	(28, 'GBP', 2000, NULL),
+	(29, 'GBP', 1800, 2000),
+	(30, 'GBP', 2300, 2600),
+	(31, 'GBP', 2400, 2600),
+	(32, 'GBP', 1500, 1800),
+	(33, 'GBP', 1500, 1800),
+	(34, 'GBP', 2000, 2500),
+	(35, 'GBP', 2000, 2500),
+	(36, 'GBP', 800, NULL),
+	(37, 'GBP', 1000, 1200),
+	(38, 'GBP', 4500, 5000),
+	(39, 'GBP', 4500, 5000),
+	(40, 'GBP', 3000, 3500),
+	(41, 'GBP', 3000, 3500),
+	(42, 'GBP', 900, NULL),
+	(43, 'GBP', 900, NULL),
+	(44, 'GBP', 3500, 4000),
+	(45, 'GBP', 1200, NULL),
+	(46, 'GBP', 1500, 1800),
+	(47, 'GBP', 600, NULL),
+	(48, 'GBP', 900, NULL),
+	(49, 'GBP', 500, NULL),
+	(50, 'GBP', 900, NULL),
+	(51, 'GBP', 600, NULL),
+	(52, 'GBP', 900, NULL);
+
+
+INSERT INTO inventory (variant_id, available_stock, stock_allocated)
+VALUES
+	(1, 30, 0),
+	(2, 20, 0),
+	(3, 80, 0),
+	(4, 60, 0),
+	(5, 70, 0),
+	(6, 75, 0),
+	(7, 40, 0),
+	(8, 30, 0),
+	(9, 90, 0),
+	(10, 85, 0),
+	(11, 120, 0),
+	(12, 130, 0),
+	(13, 110, 0),
+	(14, 100, 0),
+	(15, 110, 0),
+	(16, 95, 0),
+	(17, 140, 0),
+	(18, 150, 0),
+	(19, 130, 0),
+	(20, 200, 0),
+	(21, 180, 0),
+	(22, 120, 0),
+	(23, 115, 0),
+	(24, 100, 0),
+	(25, 90, 0),
+	(26, 80, 0),
+	(27, 100, 0),
+	(28, 85, 0),
+	(29, 120, 0),
+	(30, 80, 0),
+	(31, 70, 0),
+	(32, 150, 0),
+	(33, 150, 0),
+	(34, 60, 0),
+	(35, 60, 0),
+	(36, 110, 0),
+	(37, 95, 0),
+	(38, 35, 0),
+	(39, 35, 0),
+	(40, 50, 0),
+	(41, 45, 0),
+	(42, 130, 0),
+	(44, 25, 0),
+	(45, 75, 0),
+	(46, 70, 0),
+	(47, 140, 0),
+	(48, 125, 0),
+	(49, 160, 0),
+	(50, 140, 0),
+	(51, 100, 0),
+	(52, 90, 0);
+
+
+INSERT INTO product_images (image_id, variant_id, image_url, alt_text, sort_order)
+VALUES
+	(1, 1, 'https://cdn.example.com/images/dumbbell-20kg.jpg', 'Adjustable Dumbbell Set - 20 kg', 1),
+	(2, 2, 'https://cdn.example.com/images/dumbbell-30kg.jpg', 'Adjustable Dumbbell Set - 30 kg', 1),
+	(3, 3, 'https://cdn.example.com/images/resistance-bands-6pack.jpg', 'Resistance Band Set - Pack of 6', 1),
+	(4, 4, 'https://cdn.example.com/images/resistance-bands-12pack.jpg', 'Resistance Band Set - Pack of 12', 1),
+	(5, 5, 'https://cdn.example.com/images/yoga-mat-black-173.jpg', 'Yoga Mat - Black - 173 cm', 1),
+	(6, 6, 'https://cdn.example.com/images/yoga-mat-blue-183.jpg', 'Yoga Mat - Blue - 183 cm', 1),
+	(7, 7, 'https://cdn.example.com/images/kettlebell-8kg.jpg', 'Kettlebell Door Frame Mount - 8 kg', 1),
+	(8, 8, 'https://cdn.example.com/images/kettlebell-12kg.jpg', 'Kettlebell Door Frame Mount - 12 kg', 1),
+	(9, 9, 'https://cdn.example.com/images/jumprope-2_6m.jpg', 'Weighted Jump Rope - 2.6 m', 1),
+	(10, 10, 'https://cdn.example.com/images/jumprope-2_8m.jpg', 'Weighted Jump Rope - 2.8 m', 1),
+	(11, 11, 'https://cdn.example.com/images/womens-hoodie-black-s-front.jpg', 'Women''s Hoodie Black - S - Front', 1),
+	(12, 11, 'https://cdn.example.com/images/womens-hoodie-black-s-back.jpg', 'Women''s Hoodie Black - S - Back', 2),
+	(13, 12, 'https://cdn.example.com/images/womens-hoodie-black-m-front.jpg', 'Women''s Hoodie Black - M - Front', 1),
+	(14, 12, 'https://cdn.example.com/images/womens-hoodie-black-m-back.jpg', 'Women''s Hoodie Black - M - Back', 2),
+	(15, 13, 'https://cdn.example.com/images/womens-hoodie-black-l-front.jpg', 'Women''s Hoodie Black - L - Front', 1),
+	(16, 13, 'https://cdn.example.com/images/womens-hoodie-black-l-back.jpg', 'Women''s Hoodie Black - L - Back', 2),
+	(17, 14, 'https://cdn.example.com/images/mens-joggers-grey-s-front.jpg', 'Men''s Joggers Grey - S - Front', 1),
+	(18, 14, 'https://cdn.example.com/images/mens-joggers-grey-s-back.jpg', 'Men''s Joggers Grey - S - Back', 2),
+	(19, 15, 'https://cdn.example.com/images/mens-joggers-grey-m-front.jpg', 'Men''s Joggers Grey - M - Front', 1),
+	(20, 15, 'https://cdn.example.com/images/mens-joggers-grey-m-back.jpg', 'Men''s Joggers Grey - M - Back', 2),
+	(21, 16, 'https://cdn.example.com/images/mens-joggers-grey-l-front.jpg', 'Men''s Joggers Grey - L - Front', 1),
+	(22, 16, 'https://cdn.example.com/images/mens-joggers-grey-l-back.jpg', 'Men''s Joggers Grey - L - Back', 2),
+	(23, 17, 'https://cdn.example.com/images/mens-compression-navy-s-front.jpg', 'Men Compression Navy - S - Front', 1),
+	(24, 17, 'https://cdn.example.com/images/mens-compression-navy-s-back.jpg', 'Men Compression Navy - S - Back', 2),
+	(25, 18, 'https://cdn.example.com/images/mens-compression-navy-m-front.jpg', 'Men Compression Navy - M - Front', 1),
+	(26, 18, 'https://cdn.example.com/images/mens-compression-navy-m-back.jpg', 'Men Compression Navy - M - Back', 2),
+	(27, 19, 'https://cdn.example.com/images/mens-compression-navy-l-front.jpg', 'Men Compression Navy - L - Front', 1),
+	(28, 19, 'https://cdn.example.com/images/mens-compression-navy-l-back.jpg', 'Men Compression Navy - L - Back', 2),
+	(29, 20, 'https://cdn.example.com/images/sports-socks-white-m.jpg', 'Sports Socks White - M', 1),
+	(30, 21, 'https://cdn.example.com/images/sports-socks-white-l.jpg', 'Sports Socks White - L', 1),
+	(31, 22, 'https://cdn.example.com/images/womens-leggings-black-s-front.jpg', 'Women Leggings Black - S - Front', 1),
+	(32, 22, 'https://cdn.example.com/images/womens-leggings-black-s-back.jpg', 'Women Leggings Black - S - Back', 2),
+	(33, 23, 'https://cdn.example.com/images/womens-leggings-black-m-front.jpg', 'Women Leggings Black - M - Front', 1),
+	(34, 23, 'https://cdn.example.com/images/womens-leggings-black-m-back.jpg', 'Women Leggings Black - M - Back', 2),
+	(35, 24, 'https://cdn.example.com/images/womens-leggings-black-l-front.jpg', 'Women Leggings Black - L - Front', 1),
+	(36, 24, 'https://cdn.example.com/images/womens-leggings-black-l-back.jpg', 'Women Leggings Black - L - Back', 2),
+	(37, 25, 'https://cdn.example.com/images/whey-protein-chocolate.jpg', 'Whey Protein - Chocolate', 1),
+	(38, 26, 'https://cdn.example.com/images/whey-protein-vanilla.jpg', 'Whey Protein - Vanilla', 1),
+	(39, 27, 'https://cdn.example.com/images/preworkout-berry.jpg', 'Pre Workout - Berry Mix', 1),
+	(40, 28, 'https://cdn.example.com/images/preworkout-unflavoured.jpg', 'Pre Workout - Unflavoured', 1),
+	(41, 29, 'https://cdn.example.com/images/creatine-monohydrate.jpg', 'Creatine Monohydrate', 1),
+	(42, 30, 'https://cdn.example.com/images/vegan-protein-chocolate.jpg', 'Vegan Protein Shake - Chocolate', 1),
+	(43, 31, 'https://cdn.example.com/images/vegan-protein-vanilla.jpg', 'Vegan Protein Shake - Vanilla', 1),
+	(44, 32, 'https://cdn.example.com/images/energy-bars-chocolate-12pack.jpg', 'Energy Bars Chocolate - 12 Pack', 1),
+	(45, 33, 'https://cdn.example.com/images/energy-bars-berry-12pack.jpg', 'Energy Bars Berry - 12 Pack', 1),
+	(46, 34, 'https://cdn.example.com/images/gymbag-black.jpg', 'Gym Bag - Black', 1),
+	(47, 35, 'https://cdn.example.com/images/gymbag-blue.jpg', 'Gym Bag - Blue', 1),
+	(48, 36, 'https://cdn.example.com/images/waterbottle-black-500.jpg', 'Water Bottle Black - 500ml', 1),
+	(49, 37, 'https://cdn.example.com/images/waterbottle-blue-750.jpg', 'Water Bottle Blue - 750ml', 1),
+	(50, 38, 'https://cdn.example.com/images/fitnesswatch-black.jpg', 'Smart Fitness Watch - Black', 1),
+	(51, 39, 'https://cdn.example.com/images/fitnesswatch-white.jpg', 'Smart Fitness Watch - White', 1),
+	(52, 40, 'https://cdn.example.com/images/headphones-black.jpg', 'Sweat Proof Headphones - Black', 1),
+	(53, 41, 'https://cdn.example.com/images/headphones-blue.jpg', 'Sweat Proof Headphones - Blue', 1),
+	(54, 42, 'https://cdn.example.com/images/armband-black-m.jpg', 'Phone Armband Black - M', 1),
+	(55, 43, 'https://cdn.example.com/images/armband-black-l.jpg', 'Phone Armband Black - L', 1),
+	(56, 44, 'https://cdn.example.com/images/massage-gun.jpg', 'Massage Gun - Black', 1),
+	(57, 45, 'https://cdn.example.com/images/foam-roller-45cm.jpg', 'Foam Roller - 45 cm', 1),
+	(58, 46, 'https://cdn.example.com/images/foam-roller-60cm.jpg', 'Foam Roller - 60 cm', 1),
+	(59, 47, 'https://cdn.example.com/images/muscle-balm-50ml.jpg', 'Muscle Relief Balm - 50 ml', 1),
+	(60, 48, 'https://cdn.example.com/images/muscle-balm-100ml.jpg', 'Muscle Relief Balm - 100 ml', 1),
+	(61, 49, 'https://cdn.example.com/images/gelpack-single.jpg', 'Hot/Cold Gel Pack - Single', 1),
+	(62, 50, 'https://cdn.example.com/images/gelpack-2pack.jpg', 'Hot/Cold Gel Pack - Pack of 2', 1),
+	(63, 51, 'https://cdn.example.com/images/sleep-tea-20bags.jpg', 'Sleep Tea - 20 Bags', 1),
+	(64, 52, 'https://cdn.example.com/images/sleep-tea-40bags.jpg', 'Sleep Tea - 40 Bags', 1);

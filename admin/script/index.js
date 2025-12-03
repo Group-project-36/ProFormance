@@ -110,3 +110,4 @@ function renderProducts(products) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No products found</td></tr>';
     return;
   }
+  const htmlRows = products.map(p => {

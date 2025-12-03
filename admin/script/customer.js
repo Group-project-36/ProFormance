@@ -1,7 +1,7 @@
 const API_CUSTOMERS = "/api/customers";
 
 
-// Load Customer (Done)
+// Load Customer 
 async function loadCustomers() {
   try {
     const res = await fetch(API_CUSTOMERS);
@@ -11,53 +11,6 @@ async function loadCustomers() {
   } catch (err) {
     console.error("Error loading customers:", err);
   }
-}
-
-
-//Search customer from backend
-async function searchCustomersFromDB(query) {
-  const res = await fetch(
-    `${API_BASE_URL}/customers/search?q=${encodeURIComponent(query)}`
-  );
-  if (!res.ok) return [];
-  return res.json();
-}
-
-// Add Customer to DB Funnction ( For Admin Only) (via Backend )
-async function addCustomerToDB(customerData) {
-  const response = await fetch(`${API_BASE_URL}/customers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(customerData)
-  });
-
-  if (!response.ok) throw new Error(`Add failed: ${response.status}`);
-
-  return response.json();
-}
-
-// Delete Function
-async function deleteCustomerFromDB(customerId) {
-  const response = await fetch(`${API_BASE_URL}/customers/${customerId}`, { method: 'DELETE' });
-  
-  if (!response.ok) throw new Error(`Delete failed: ${response.status}`);
-}
-
-// Add Customer Modal
-function openAddCustomerModal() {
-  const modal = document.getElementById('add-customer-modal');
-  const form = document.getElementById('customer-form');
-  modal.classList.add('show');
-  form.reset();
-
-  const joinDateInput = document.getElementById('join-date');
-  if (joinDateInput) {
-    joinDateInput.valueAsDate = new Date();
-  }
-}
-
-function closeAddCustomerModal() {
-  document.getElementById('add-customer-modal').classList.remove('show');
 }
 
 // Delete Customer Function (need provide DELETE /customers/{id})
@@ -78,9 +31,7 @@ async function deleteCustomer(id) {
   }
 }
 
-
-
-// Search (Done)
+// Search 
   
 document.getElementById("search-btn").addEventListener("click", async () => {
   const keyword = document.getElementById("customer-search").value.toLowerCase();
@@ -98,18 +49,7 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 // Load Customer 
 loadCustomers();
 
-//Search Query
-async function searchCustomers(query) {
-  try {
-    const customers = await searchCustomersFromDB(query);
-    renderCustomers(customers);
-  } catch (error) {
-    console.error('Error searching customers:', error);
-    alert('Search Failed.');
-  }
-}
-
-//render Customer (Done)
+//render Customer
 
 function renderCustomers(customers) {
   const tbody = document.getElementById("customer-table-body");
@@ -137,7 +77,7 @@ function renderCustomers(customers) {
   });
 }
 
-// Add Customer Submission (Done)
+// Add Customer Submission 
 document.getElementById("customer-form").addEventListener("submit", async function(e) {
   e.preventDefault();
   

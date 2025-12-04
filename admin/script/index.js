@@ -250,3 +250,7 @@ function editProduct(product) {
     document.getElementById("modal-title").innerText = "Edit Product";
     document.getElementById("product-modal").style.display = "block";
 }
+
+function closeModal() {
+    document.getElementById("product-modal").style.display = "none";
+}

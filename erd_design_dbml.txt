@@ -1,0 +1,582 @@
+
+Enum user_role {
+  customer
+  business
+  admin
+}
+
+ENUM order_status {
+  pending
+  paid
+  fulfilled
+  cancelled
+  refunded
+}
+
+ENUM payment_status {
+  authorised
+  voided
+  refunded
+  failed
+}
+
+ENUM shipment_status {
+  pending
+  packed
+  shipped
+  delivered
+  cancelled
+}
+
+ENUM refund_status {
+  pending
+  succeeded
+  failed
+}
+
+ENUM return_status {
+  requested
+  approved
+  received
+  rejected
+  refunded
+  cancelled
+}
+
+Enum discount_type { 
+  percent
+  fixed 
+}
+
+
+TABLE login_details {
+  user_id integer [pk, ref: - users.user_id]
+  email_address varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+  password_salt varchar(32) [not null]
+
+  indexes {
+    email_address
+  }
+
+}
+
+Table users {
+  //Keeping the admin and the customer in the same table since
+  //I believe the brief mentions something about that the admin
+  // will automatically redirected to the admin dashboard based
+  //on their credentials
+  
+  user_id serial [pk]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  company_name varchar(255)
+  phone_number varchar(20)
+  email_verified boolean [default: false]
+  role user_role [not null, DEFAULT: 'customer']
+  is_active boolean [not null, DEFAULT: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    role
+    is_active
+  }
+}
+
+TABLE user_tax_profiles {
+  user_id integer [pk, ref: > users.user_id]
+  vat_number varchar(50)
+  tax_exempt boolean [not null, default: false]
+  tax_exempt_reason varchar(20) [default: 'vat_registered']
+  tax_validation_date timestamptz
+  created_at timestamptz [default: `now()`]
+  
+  indexes {
+    vat_number
+    tax_exempt
+  }
+}
+
+TABLE addresses {
+  address_id serial [pk]
+  user_id integer [not null, ref: > users.user_id]
+  recipient_name varchar(200) [not null]
+  house_number varchar(10) [not null]
+  address_line_one varchar(100) [not null]
+  address_line_two varchar(100)
+  city varchar(100) [not null]
+  county varchar(100) 
+  postcode varchar(100) [not null]
+  country_code char(2) [not null, ref: > countries.country_code]
+  phone_number varchar(20)
+  is_default_shipping_address boolean
+  is_default_billing_address boolean
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  //Adress validation
+  Note: 'only one default shipping and delivery address per user. Unique constraints or logic will be necessary'
+
+
+  indexes {
+    user_id
+    is_default_billing_address
+    is_default_shipping_address
+  }
+}
+
+TABLE countries {
+  country_code char(2) [pk]
+  country_name varchar(100) [not null]
+  is_active boolean [not null, DEFAULT: true]
+  iso_alpha_3 char(3) [not null, unique]
+  iso_numeric smallint [not null, unique]
+  sort_order integer [default: 0]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  Note: 'ISO 3166'
+
+  indexes {
+    country_name
+    is_active
+    sort_order
+  }
+}
+
+TABLE brands {
+  brand_id serial [pk]
+  name varchar(100) [not null, unique]
+  slug varchar(100) [not null, unique]
+  description text
+  logo_url varchar(255)
+  is_active boolean [not null, DEFAULT: true]
+  sort_order integer [default: 0]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  
+  indexes {
+    slug
+    is_active
+    sort_order
+  }
+}
+
+TABLE categories {
+  category_id serial [pk]
+  name varchar(100) [not null, unique]
+  description text
+  sort_order integer [default: 0]
+  slug varchar(100) [not null, unique]
+  parent_id integer [ref: > categories.category_id] //For subcategories
+  is_active boolean [not null, DEFAULT: true]
+  image_url varchar(255)
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+   
+   indexes {
+    parent_id
+    slug
+    sort_order
+    is_active
+  }
+}
+
+TABLE currencies {
+  currency_code char(3) [pk] //ISO 4217
+  currency_name varchar(50) [not null]
+  symbol varchar(10)
+  is_active boolean [not null, DEFAULT: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    is_active
+  }  
+}
+
+TABLE products {
+  product_id serial [pk]
+  name varchar(255) [not null]
+  brand_id integer [not null, ref: > brands.brand_id]
+  description text
+  is_active boolean [not null, DEFAULT: true]
+  short_description varchar(500)
+  meta_title varchar(200)
+  meta_description varchar(300)
+  created_at timestamptz [default: `now()`] 
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    brand_id 
+    is_active 
+    created_at
+  }
+}
+
+TABLE product_category {
+  product_id integer [not null, ref: > products.product_id]
+  category_id integer [not null, ref: > categories.category_id]
+
+  indexes {
+    (product_id, category_id) [pk]
+    product_id
+    category_id
+  }
+}
+
+TABLE variant_attributes {
+  attribute_id serial [pk]
+  attribute_name varchar(50) [not null, unique] //Like size colour but for backend
+  display_name varchar(100) [not null, unique] //Size, Colour for frontend
+  selection_order integer [not null]
+  is_active boolean [not null, DEFAULT: true]
+}
+
+TABLE variant_options {
+  option_id serial [pk]
+  attribute_id integer [not null, ref: > variant_attributes.attribute_id]
+  value varchar(100) [not null] // s red 1kg backend
+  display_value varchar(100) [not null] //Small, Red, 1 kg frontend
+  sort_order integer [default: 0]
+  is_active boolean [not null, DEFAULT: true]
+
+  indexes {
+    (attribute_id, value) [unique]
+    (attribute_id, sort_order)
+  }
+}
+
+TABLE product_variants {
+  variant_id serial [pk]
+  product_id integer [not null, ref: > products.product_id]
+  sku varchar(64) [not null, unique]
+  stock_quantity integer [not null, default: 0]
+  barcode varchar(64) [unique]
+  title varchar(200)
+  options_key varchar(255)
+  is_active boolean [not null, DEFAULT: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    (product_id, options_key) [unique]
+  }
+}
+
+
+TABLE variant_combinations {
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  option_id integer [not null, ref: > variant_options.option_id]
+
+  indexes {
+    (variant_id, option_id) [pk]
+  }
+}
+
+TABLE variant_currency_prices {
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  currency_code char(3) [not null, ref: > currencies.currency_code]
+  price_penny int [not null]
+  was_price_penny int
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    (variant_id, currency_code) [pk]
+    variant_id
+    currency_code
+  }
+}
+
+TABLE inventory {
+  variant_id integer [pk, ref: > product_variants.variant_id]
+  available_stock integer [not null, default: 0]
+  stock_allocated integer [not null, default: 0]
+  reorder_point int
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+TABLE product_images {
+  image_id serial [pk]
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  image_url varchar(255) [not null]
+  alt_text varchar(200)
+  sort_order integer [default: 0]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+TABLE payment_providers {
+  provider_id serial [pk]
+  provider_key varchar(50) [not null, unique] //paypal amex
+  display_name varchar(100) [not null]
+  logo_url text
+  is_active boolean [not null, DEFAULT: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+TABLE carts {
+  cart_id serial [pk]
+  user_id integer [not null, ref: > users.user_id]
+  client_token uuid [unique]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    user_id
+  }
+}
+
+TABLE cart_items {
+  cart_id integer [not null, ref: > carts.cart_id]
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  quantity integer [not null]
+  unit_price_penny integer [not null] //will have to update it
+  currency_code char(3) [not null, ref: > currencies.currency_code]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    (cart_id, variant_id) [pk]
+    cart_id
+    variant_id
+  }
+}
+
+TABLE orders {
+  order_id serial [pk]
+  order_number varchar(50) [not null, unique]
+  user_id integer [ref: > users.user_id]
+  currency_code char(3) [not null, ref: > currencies.currency_code]
+  status order_status [not null, default: 'pending']
+
+  //update
+  subtotal_penny integer [not null]
+  shipping_penny integer [not null, default: 0]
+  tax_penny integer [not null, default: 0]
+  discount_penny integer [not null, default: 0]
+  total_penny integer [not null]
+
+  ship_recipient_name varchar(200)
+  ship_house_number varchar(10)
+  ship_address_line_one varchar(100)
+  ship_address_line_two varchar(100)
+  ship_city varchar(100)
+  ship_county varchar(100)
+  ship_postcode varchar(100)
+  ship_country_code char(2) [ref: > countries.country_code]
+  ship_phone_number varchar(30)
+  shipping_address_id integer [ref: > addresses.address_id]
+
+
+  bill_recipient_name varchar(200)
+  bill_house_number varchar(10)
+  bill_address_line_one varchar(100)
+  bill_address_line_two varchar(100)
+  bill_city varchar(100)
+  bill_county varchar(100)
+  bill_postcode varchar(100)
+  bill_country_code char(2) [ref: > countries.country_code]
+  bill_phone_number varchar(30)
+  billing_address_id integer [ref: > addresses.address_id]
+
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    order_number
+    user_id
+    status
+    created_at 
+  }
+
+}
+
+TABLE order_items {
+  order_item_id serial [pk]
+  order_id integer [not null, ref: > orders.order_id]
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  sku varchar(64) [not null]
+  title varchar(64) [not null]
+  unit_price_penny integer [not null]
+  quantity integer [not null]
+  tax_rate numeric(4, 2)
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    order_id
+  }
+}
+
+TABLE payments {
+  payment_id serial [pk]
+  order_id integer [not null, ref: > orders.order_id]
+  provider_id integer [not null, ref: > payment_providers.provider_id]
+  provider_ref varchar(100)
+  amount_penny integer [not null]
+  currency_code char(3) [not null, ref: > currencies.currency_code]
+  status payment_status [not null, default: 'authorised']
+  error_message text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+TABLE shipments {
+  shipment_id serial [pk]
+  order_id integer [not null, ref: > orders.order_id]
+  carrier varchar(50)
+  service_level varchar(50)
+  tracking_number varchar(100)
+  status shipment_status [default: 'pending']
+  shipped_at timestamptz
+  delivered_at timestamptz
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    order_id
+    tracking_number
+    status
+  }
+}
+
+
+TABLE discounts {
+  discount_id serial [pk]
+  code varchar(50) [unique]
+  type discount_type [not null]
+  value numeric(12, 2) [not null]
+  starts_at timestamptz
+  ends_at timestamptz
+  usage_limit integer
+  per_user_limit integer
+  min_subtotal_penny integer
+  is_active boolean [not null, DEFAULT: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    code
+    is_active
+    starts_at
+    ends_at
+  }
+}
+
+TABLE order_discounts {
+  order_id integer [not null, ref: > orders.order_id]
+  discount_id integer [not null, ref: > discounts.discount_id]
+  amount_applied_penny integer [not null, default: 0]
+
+  indexes {
+    (order_id, discount_id) [pk]
+    order_id
+  }
+}
+
+TABLE discount_redemptions {
+  redemption_id serial [pk]
+  discount_id integer [not null, ref: > discounts.discount_id]
+  user_id integer [not null, ref: > users.user_id]
+  order_id integer [not null, ref: > orders.order_id]
+  redeemed_at timestamptz [default: `now()`]
+  
+  indexes {
+    discount_id
+    user_id
+    order_id
+  }
+}
+
+TABLE wishlists {
+  wishlist_id serial [pk]
+  user_id integer [not null, ref: > users.user_id]
+  wishlist_name varchar(100) [not null, default: 'My Wishlist']
+  is_public boolean [not null, default: false]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    user_id
+  }
+}
+
+TABLE wishlist_items {
+  wishlists_id integer [not null, ref: > wishlists.wishlist_id]
+  variant_id integer [not null, ref: > product_variants.variant_id]
+  created_at timestamptz [default: `now()`]
+
+  indexes {
+    (wishlists_id, variant_id) [pk]
+    wishlists_id
+    variant_id
+  }
+}
+
+TABLE reviews {
+  review_id serial [pk]
+  product_id integer [not null, ref: > products.product_id]
+  user_id integer [not null, ref: > users.user_id]
+  rating smallint [not null] //check either 1-5 or 1-10 or whatev
+  title varchar(200)
+  body text
+  is_approved boolean [not null, default: false]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    product_id
+    user_id
+    is_approved
+  }
+}
+
+TABLE returns {
+  return_id serial [pk]
+  order_id integer [not null, ref: > orders.order_id]
+  status return_status [not null, default: 'requested']
+  reason text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    order_id
+    status
+  }
+} 
+
+TABLE return_items {
+  return_id integer [not null, ref: > returns.return_id]
+  order_item_id integer [not null, ref: > order_items.order_item_id]
+  quantity integer [not null]
+  refund_amount_penny integer
+  condition_notes text
+
+  indexes {
+    (return_id, order_item_id) [pk]
+    return_id
+    order_item_id
+  }
+}
+
+TABLE refunds {
+  refund_id serial [pk]
+  order_id integer [not null, ref: > orders.order_id]
+  payment_id integer [not null, ref: > payments.payment_id]
+  amount_penny integer [not null]
+  status refund_status [not null, default: 'pending']
+  reason text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    order_id
+    payment_id
+    status
+  }
+}

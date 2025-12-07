@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Proformance Products</title>
+
+    <style>
+        :root {
+            --pf-bg: #f5f7fb;
+            --pf-bg-soft: #eef2f8;
+            --pf-card-bg: #ffffff;
+            --pf-border-soft: #dde2ee;
+            --pf-text-main: #222222;
+            --pf-text-muted: #6c7585;
+            --pf-accent: #f1b53c;
+            --pf-accent-soft: #ffe7b0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--pf-bg);
+            font-family: system-ui, sans-serif;
+        }
+
+        .pf-products-page {
+            min-height: 100vh;
+            padding: 2.5rem 1rem 3rem;
+        }
+
+        .pf-products-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            color: var(--pf-text-main);
+        }
+
+        .pf-heading-block {
+            margin-bottom: 1.75rem;
+        }
+
+        .pf-heading-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .pf-heading-sub {
+            font-size: 0.9rem;
+            color: var(--pf-text-muted);
+        }
+
+        .pf-filters-card {
+            background: var(--pf-card-bg);
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(19, 31, 68, 0.06);
+            border: 1px solid var(--pf-border-soft);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pf-filters-top {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .pf-filters-title {
+            font-weight: 600;
+        }
+
+        .pf-filters-reset {
+            border: none;
+            background: transparent;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .pf-filters-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 850px) {
+            .pf-filters-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .pf-filters-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pf-field-label {
+            font-size: 0.78rem;
+            color: var(--pf-text-muted);
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        .pf-input, .pf-select {
+            width: 100%;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid var(--pf-border-soft);
+            background: #f9fbff;
+            color: var(--pf-text-main);
+            outline: none;
+        }
+
+        .pf-products-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 1100px) {
+            .pf-products-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 850px) {
+            .pf-products-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .pf-products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pf-product-card {
+            background: var(--pf-card-bg);
+            border-radius: 18px;
+            border: 1px solid var(--pf-border-soft);
+            padding-bottom: 1rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .pf-product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.1);
+        }
+
+        .pf-card-image-wrap {
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .pf-card-image-wrap img {
+            max-width: 100%;
+            max-height: 150px;
+        }
+
+        .pf-card-body {
+            padding: 0 1rem;
+        }
+
+        .pf-card-category {
+            font-size: 0.78rem;
+            color: var(--pf-text-muted);
+        }
+
+        .pf-card-name {
+            font-weight: 600;
+            min-height: 2.4em;
+        }
+
+        .pf-card-price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+        }
+
+        .pf-price-main {
+            font-weight: 700;
+            color: var(--pf-accent);
+        }
+
+        .pf-price-old {
+            font-size: 0.8rem;
+            text-decoration: line-through;
+            color: #9aa0b5;
+        }
+
+        .pf-add-btn {
+            padding: 0.4rem 0.9rem;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, var(--pf-accent), var(--pf-accent-soft));
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .pf-no-results {
+            text-align: center;
+            color: var(--pf-text-muted);
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+
+<section class="pf-products-page">
+    <div class="pf-products-inner">
+
+        <div class="pf-heading-block">
+            <h1 class="pf-heading-title">All Products</h1>
+            <p class="pf-heading-sub">
+                Browse ProFormance gym equipment, apparel, supplements, and recovery tools.
+            </p>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="pf-filters-card">
+
+            <div class="pf-filters-top">
+                <span class="pf-filters-title">Filter & Search</span>
+                <button id="pfResetFilters" class="pf-filters-reset">Reset filters</button>
+            </div>
+
+            <div class="pf-filters-grid">
+                <div>
+                    <label class="pf-field-label">Search</label>
+                    <input id="pfSearchInput" type="text" class="pf-input" placeholder="Search products...">
+                </div>
+
+                <div>
+                    <label class="pf-field-label">Category</label>
+                    <select id="pfCategorySelect" class="pf-select">
+                        <option value="all">All categories</option>
+                        <option value="gym-equipment">Gym Equipment</option>
+                        <option value="apparel">Gym Apparel</option>
+                        <option value="nutrition">Nutrition & Supplements</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="recovery">Recovery & Wellness</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="pf-field-label">Min Price (£)</label>
+                    <input id="pfMinPrice" type="number" class="pf-input" placeholder="0">
+                </div>
+
+                <div>
+                    <label class="pf-field-label">Max Price (£)</label>
+                    <input id="pfMaxPrice" type="number" class="pf-input" placeholder="200">
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTS GRID -->
+        <div id="pfProductsGrid" class="pf-products-grid"></div>
+
+        <p id="pfNoResults" class="pf-no-results" style="display:none;">No products found.</p>
+
+    </div>
+</section>
+
+<script>
+    const pfProducts = [
+        { id: 1, name: 'Adjustable Dumbbell Set', category: 'gym-equipment', price: 89.99, oldPrice: 109.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 2, name: 'Resistance Band Set', category: 'gym-equipment', price: 24.99, oldPrice: 29.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 3, name: 'Yoga Mat', category: 'gym-equipment', price: 19.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 4, name: 'Kettlebell (Door Frame Mount)', category: 'gym-equipment', price: 39.99, oldPrice: 44.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 5, name: 'Weighted Jump Rope (Adjustable)', category: 'gym-equipment', price: 14.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+
+        { id: 6, name: 'Women’s Zip Up Hoodie', category: 'apparel', price: 34.99, oldPrice: 39.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 7, name: 'Men’s Athletic Joggers', category: 'apparel', price: 29.99, oldPrice: 34.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 8, name: 'Men’s Compression Tops', category: 'apparel', price: 24.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 9, name: 'Sports Socks', category: 'apparel', price: 9.99, oldPrice: 11.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 10, name: 'Women’s Seamless Leggings (High Waist)', category: 'apparel', price: 27.99, oldPrice: 32.99, imageUrl: 'https://via.placeholder.com/150' },
+
+        { id: 11, name: 'Whey Protein', category: 'nutrition', price: 24.99, oldPrice: 29.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 12, name: 'Pre-Workout Powder', category: 'nutrition', price: 21.99, oldPrice: 26.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 13, name: 'Creatine Monohydrate', category: 'nutrition', price: 17.99, oldPrice: 19.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 14, name: 'Vegan Protein Shake', category: 'nutrition', price: 23.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 15, name: 'Energy Bars', category: 'nutrition', price: 18.99, oldPrice: 21.99, imageUrl: 'https://via.placeholder.com/150' },
+
+        { id: 16, name: 'Gym Bag (Water Resistant)', category: 'accessories', price: 32.99, oldPrice: 36.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 17, name: 'Water Bottle', category: 'accessories', price: 9.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 18, name: 'Smart Fitness Watch', category: 'accessories', price: 79.99, oldPrice: 89.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 19, name: 'Sweat Proof Headphones', category: 'accessories', price: 49.99, oldPrice: 59.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 20, name: 'Phone Armband Holder', category: 'accessories', price: 12.99, oldPrice: 14.99, imageUrl: 'https://via.placeholder.com/150' },
+
+        { id: 21, name: 'Massage Gun', category: 'recovery', price: 89.99, oldPrice: 99.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 22, name: 'Foam Roller', category: 'recovery', price: 19.99, oldPrice: 24.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 23, name: 'Muscle Relief Balm', category: 'recovery', price: 8.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 24, name: 'Hot/Cold Gel Pack', category: 'recovery', price: 7.99, oldPrice: 9.99, imageUrl: 'https://via.placeholder.com/150' },
+        { id: 25, name: 'Sleep Support Tea – Herbal', category: 'recovery', price: 6.99, oldPrice: null, imageUrl: 'https://via.placeholder.com/150' },
+    ];
+
+    const pfGrid = document.getElementById('pfProductsGrid');
+    const pfSearchInput = document.getElementById('pfSearchInput');
+    const pfCategorySelect = document.getElementById('pfCategorySelect');
+    const pfMinPrice = document.getElementById('pfMinPrice');
+    const pfMaxPrice = document.getElementById('pfMaxPrice');
+    const pfResetFilters = document.getElementById('pfResetFilters');
+    const pfNoResults = document.getElementById('pfNoResults');
+
+    function pfCategoryLabel(cat) {
+        switch (cat) {
+            case 'gym-equipment': return 'Gym Equipment';
+            case 'apparel': return 'Gym Apparel';
+            case 'nutrition': return 'Nutrition & Supplements';
+            case 'accessories': return 'Accessories';
+            case 'recovery': return 'Recovery & Wellness';
+            default: return cat;
+        }
+    }
+
+    function pfCreateCard(p) {
+        const card = document.createElement('article');
+        card.className = 'pf-product-card';
+
+        card.innerHTML = `
+            <div class="pf-card-image-wrap">
+                <img src="${p.imageUrl}" alt="">
+            </div>
+            <div class="pf-card-body">
+                <div class="pf-card-category">${pfCategoryLabel(p.category)}</div>
+                <div class="pf-card-name">${p.name}</div>
+                <div class="pf-card-price-row">
+                    <div>
+                        ${p.oldPrice ? `<span class="pf-price-old">£${p.oldPrice}</span>` : ''}
+                        <span class="pf-price-main">£${p.price}</span>
+                    </div>
+                    <button class="pf-add-btn">Add</button>
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    function pfApplyFilters() {
+        const search = pfSearchInput.value.toLowerCase();
+        const cat = pfCategorySelect.value;
+        const min = parseFloat(pfMinPrice.value);
+        const max = parseFloat(pfMaxPrice.value);
+
+        const results = pfProducts.filter(p => {
+            return (
+                p.name.toLowerCase().includes(search) &&
+                (cat === 'all' || p.category === cat) &&
+                (isNaN(min) || p.price >= min) &&
+                (isNaN(max) || p.price <= max)
+            );
+        });
+
+        pfRender(results);
+    }
+
+    function pfRender(list) {
+        pfGrid.innerHTML = '';
+        if (!list.length) {
+            pfNoResults.style.display = 'block';
+            return;
+        }
+        pfNoResults.style.display = 'none';
+
+        list.forEach(p => pfGrid.appendChild(pfCreateCard(p)));
+    }
+
+    function pfReset() {
+        pfSearchInput.value = '';
+        pfCategorySelect.value = 'all';
+        pfMinPrice.value = '';
+        pfMaxPrice.value = '';
+        pfApplyFilters();
+    }
+
+    pfSearchInput.addEventListener('input', pfApplyFilters);
+    pfCategorySelect.addEventListener('change', pfApplyFilters);
+    pfMinPrice.addEventListener('input', pfApplyFilters);
+    pfMaxPrice.addEventListener('input', pfApplyFilters);
+    pfResetFilters.addEventListener('click', pfReset);
+
+    pfRender(pfProducts);
+</script>
+
+</body>
+</html>

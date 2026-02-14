@@ -1,0 +1,103 @@
+/* ============================= */
+/*       Contact Page Styles     */
+/* ============================= */
+
+.contact-wrapper {
+    max-width: 850px;
+    margin: 0 auto;
+    background: var(--kb-secondary-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--kb-box-shadow);
+    font-family: var(--kb-font-family);
+}
+
+.contact-wrapper h1 {
+    font-size: var(--kb-font-size-3xl-fluid);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: red;
+}
+
+.contact-wrapper .form-label {
+    font-size: var(--kb-font-size-sm-fluid);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--kb-primary-font);
+}
+
+.contact-wrapper .form-control,
+.contact-wrapper .form-select,
+.contact-wrapper textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: var(--kb-font-size-md-fluid);
+    border: 1px solid var(--kb-button-border);
+    border-radius: 8px;
+    background: var(--kb-primary-bg);
+    color: var(--kb-primary-font);
+    transition: 0.2s ease;
+}
+
+.contact-wrapper .form-control:focus,
+.contact-wrapper .form-select:focus,
+.contact-wrapper textarea:focus {
+    border-color: var(--kb-button-beige-border);
+    box-shadow: 0 0 0 3px rgba(255, 168, 93, 0.25);
+    outline: none;
+}
+
+.contact-wrapper ::placeholder {
+    color: var(--kb-secondary-font);
+    font-size: var(--kb-font-size-sm-fluid);
+}
+
+.contact-wrapper .row > .col-md-6,
+.contact-wrapper .row > .col-12 {
+    margin-bottom: 1.25rem;
+}
+
+.contact-wrapper button[type="submit"] {
+    background: var(--kb-button-beige);
+    border: 1px solid var(--kb-button-beige-border);
+    padding: 0.85rem 2rem;
+    font-size: var(--kb-font-size-md-fluid);
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--kb-primary-font);
+}
+
+.contact-wrapper button[type="submit"]:hover {
+    background: var(--kb-button-beige-hover);
+    border-color: var(--kb-button-beige-hover);
+    color: white;
+}
+
+.alert-success {
+    background: #d1fae5;
+    padding: 1rem;
+    border-radius: 8px;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    margin-bottom: 1.5rem;
+    font-size: var(--kb-font-size-md-fluid);
+}
+
+.alert-danger {
+    background: #fee2e2;
+    padding: 1rem;
+    border-radius: 8px;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    margin-bottom: 1.5rem;
+    font-size: var(--kb-font-size-md-fluid);
+}
+
+.invalid-feedback {
+    color: var(--kb-sale-red);
+    font-size: var(--kb-font-size-xsm);
+    margin-top: 0.25rem;
+}
+

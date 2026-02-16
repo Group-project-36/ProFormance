@@ -25,20 +25,33 @@
                         </p>
                     @endif
 
+                    @php
+                        $vatRate = ($vatRate ?? 0);
+                        $symbol  = $bestPrice->symbol ?? '£';
+
+                        $current = ($bestPrice && $bestPrice->price)
+                            ? $bestPrice->price * (1 + $vatRate)
+                            : 0;
+
+                        $old = ($bestPrice && $bestPrice->was && $bestPrice->was > $bestPrice->price)
+                            ? $bestPrice->was * (1 + $vatRate)
+                            : null;
+                    @endphp
+
                     <div class="kb-product-page-prices">
-                        @if($bestPrice && $bestPrice->was && $bestPrice->was > $bestPrice->price)
+                        @if($old)
                             <span class="kb-product-page-price-old">
-                                {{ $bestPrice->symbol ?? '£' }}{{ number_format($bestPrice->was, 2) }}
+                                {{ $symbol }}{{ number_format($old, 2) }}
                             </span>
                         @endif
 
                         <span class="kb-product-page-price-current">
-                            @if($bestPrice && $bestPrice->price)
-                                {{ $bestPrice->symbol ?? '£' }}{{ number_format($bestPrice->price, 2) }}
-                            @else
-                                {{ $bestPrice->symbol ?? '£' }}0.00
-                            @endif
+                            {{ $symbol }}{{ number_format($current, 2) }}
                         </span>
+
+                        <div class="kb-product-page-vat-note">
+                            <small class="text-muted">{{ $vatLabel ?? '' }}</small>
+                        </div>
                     </div>
 
                     <div class="kb-product-page-actions">

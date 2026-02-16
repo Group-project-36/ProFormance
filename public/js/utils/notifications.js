@@ -5,7 +5,7 @@
  * sequence, triggering exit animations and removing elements from the 
  * DOM after a set duration.
  */
-export const Toast = {
+const Toast = {
     show: function(message, type = 'info') {
         const existing = document.querySelector('.kb-toast');
         if (existing) existing.remove();

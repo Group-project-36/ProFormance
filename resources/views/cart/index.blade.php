@@ -60,6 +60,7 @@
                                             <span class="kb-cart-unit-price">
                                                 @php $symbol = $line['symbol'] ?? '£'; @endphp
                                                 {{ $symbol }}{{ number_format($price, 2) }}
+                                                <span class="kb-muted">{{ $vatLabel ?? ($line['vat_label'] ?? '') }}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -135,7 +136,9 @@
                     <div class="kb-cart-summary-line kb-cart-summary-total">
                         <span>Total</span>
                         @php $symbol = ($lines[0]['symbol'] ?? '£'); @endphp
-                        <strong>{{ $symbol }}<span id="js-total">{{ number_format($total, 2) }}</span></strong>
+                       <strong>{{ $symbol }}<span id="js-total">{{ number_format($total, 2) }}</span></strong>
+                        <span class="kb-muted">{{ $vatLabel ?? '' }}</span>
+
                     </div>
 
                     <div class="kb-cart-summary-actions">

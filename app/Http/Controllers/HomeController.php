@@ -12,6 +12,8 @@ class HomeController extends Controller
     public function index()
     {
         $currency = strtoupper(session('currency', 'GBP'));
+        $vatRate = $this->displayVatRateForCurrency($currency);
+        $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
 
 
         $products = DB::table('products as p')
@@ -63,11 +65,31 @@ class HomeController extends Controller
             }
         }
 
+        $products = $products->map(function ($p) use ($vatRate) {
+            $net = (int) $p->price_penny;
+            $p->display_price_penny = (int) round($net * (1 + $vatRate));
+            return $p;
+        });
+        
+
         return view('home', [
             'products'     => $products,
             'heroProducts' => $heroProducts,
             'newProducts'  => $newProducts,
             'bestPrice'    => $bestPrice,
+            'vatLabel'     => $vatLabel,
+            'vatRate'      => $vatRate,
         ]);
     }
+
+    private function displayVatRateForCurrency(string $currency): float
+    {
+        return strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
+    }
+
+    private function priceForDisplayPenny(int $netPenny, float $vatRate): int
+    {
+        return (int) round($netPenny * (1 + $vatRate));
+    }
+
 }

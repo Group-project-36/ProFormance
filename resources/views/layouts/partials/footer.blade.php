@@ -15,7 +15,7 @@
                 and feel stronger every day.
             </p>
 
-            <form class="kb-footer-newsletter" method="POST" action="#">
+            <!-- <form class="kb-footer-newsletter" method="POST" action="#">
                 @csrf
                 <label for="footer-email" class="kb-footer-newsletter-label">
                     Subscribe to our newsletter
@@ -33,10 +33,21 @@
                         Subscribe
                     </button>
                 </div>
+                
+            </form> -->
+
+            <form method="POST" action="{{ route('newsletter.subscribe') }}" class="kb-footer-newsletter">
+                @csrf
+                <label for="footer-email" class="kb-footer-newsletter-label">
+                    Subscribe to our newsletter
+                </label>
+                <input type="email" name="email_address" class="kb-footer-newsletter-input" placeholder="Email for newsletter" required>
+                <button class="kb-footer-newsletter-btn" type="submit">Subscribe</button>
                 <p class="kb-footer-newsletter-note">
                     Get early access to drops, offers and training tips. You can unsubscribe any time.
                 </p>
             </form>
+
 
             <div class="kb-footer-social">
                 <a href="#" aria-label="Instagram">
@@ -55,11 +66,12 @@
         <div class="kb-footer-col">
             <h4 class="kb-footer-heading">Shop</h4>
             <ul class="kb-footer-links">
-                <li><a href="#">Deals</a></li>
-                <li><a href="#">Unisex Apparel</a></li>
-                <li><a href="#">Performance Nutrition</a></li>
-                <li><a href="#">Advanced Supplements</a></li>
-                <li><a href="#">Gym Accessories</a></li>
+                <li><a href="{{ route('products.index', ['deals' => 1]) }}">Deals</a></li>
+                <li><a href="{{ route('products.category', 'gym-apparel') }}">Unisex Apparel</a></li>
+                <li><a href="{{ route('products.category', 'nutrition-and-supplements') }}">Performance Nutrition</a></li>
+                <li><a href="{{ route('products.category', 'recovery-and-wellness') }}">Advanced Supplements</a></li>
+                <li><a href="{{ route('products.category', 'accessories') }}">Gym Accessories</a></li>
+                <li><a href="{{ route('products.category', 'gym-equipment') }}">Bags &amp; Equipment</a></li>
             </ul>
         </div>
 
@@ -108,14 +120,13 @@
     <div class="kb-footer-payments">
         <div class="kb-payment-section">
             <div class="kb-payment-icons">
-                <img src="{{ asset('images/payments/visa.svg') }}" alt="Visa">
-                <img src="{{ asset('images/payments/mastercard.svg') }}" alt="Mastercard">
-                <img src="{{ asset('images/payments/amex.svg') }}" alt="American Express">
-                <img src="{{ asset('images/payments/paypal.svg') }}" alt="PayPal">
-                <img src="{{ asset('images/payments/apple-pay.svg') }}" alt="Apple Pay">
-                <img src="{{ asset('images/payments/google-pay.svg') }}" alt="Google Pay">
-                <img src="{{ asset('images/payments/klarna.svg') }}" alt="Klarna">
-                <img src="{{ asset('images/payments/clearpay.svg') }}" alt="Clearpay">
+                <x-icon name="amex" />
+                <x-icon name="applepay" />
+                <x-icon name="googlepay" />
+                <x-icon name="mastercard" />
+                <x-icon name="paypal" />
+                <x-icon name="samsungpay" />
+                <x-icon name="visa" />
             </div>
         </div>
         <div class="kb-app-badges">
@@ -126,6 +137,5 @@
                 <img src="{{ asset('images/payments/app-store.svg') }}" alt="Download on the App Store">
             </a>
         </div>
-
     </div>
 </footer>

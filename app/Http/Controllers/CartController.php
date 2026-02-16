@@ -17,6 +17,7 @@ class CartController extends Controller
     protected function repriceCart(array $cart): array
     {
         $currency = $this->currency();
+        $vatRate = $this->displayVatRateForCurrency(strtoupper($currency));
 
         $variantIds = array_values(array_unique(array_column($cart, 'variant_id')));
         if (empty($variantIds)) return $cart;
@@ -37,14 +38,36 @@ class CartController extends Controller
             $line['symbol'] = $row->symbol ?? '£';
 
             // Convert pennies → decimal
-            $line['price'] = $row ? ($row->price_penny / 100) : 0;
-            $line['was']   = ($row && $row->was_price_penny) ? ($row->was_price_penny / 100) : null;
+            $netPrice = $row ? ($row->price_penny / 100) : 0;
+            $netWas   = ($row && $row->was_price_penny) ? ($row->was_price_penny / 100) : null;
+
+            // Store both (useful later for invoices etc)
+            $line['price_ex_vat'] = $netPrice;
+            $line['was_ex_vat']   = $netWas;
+
+            // Display price (GBP shows incl VAT)
+            $line['price'] = $this->applyVatToDecimal($netPrice, $vatRate);
+            $line['was']   = $netWas !== null ? $this->applyVatToDecimal($netWas, $vatRate) : null;
+
+            // Optional: label for UI
+            $line['vat_label'] = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
         }
         unset($line);
 
         $this->saveCart($cart);
         return $cart;
     }
+
+    protected function displayVatRateForCurrency(string $currency): float
+    {
+        return strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
+    }
+
+    protected function applyVatToDecimal(float $price, float $vatRate): float
+    {
+        return round($price * (1 + $vatRate), 2);
+    }
+
 
 
     protected function getCart(): array
@@ -76,11 +99,15 @@ class CartController extends Controller
         $cart = $this->getCart();
         $cart = $this->repriceCart($cart);
         [$total, $totalItems] = $this->computeTotals($cart);
+        $currency = strtoupper($cart[0]['currency'] ?? $this->currency());
+        $vatRate  = $this->displayVatRateForCurrency($currency);
+        $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
 
         return view('cart.index', [
             'lines'      => $cart,
             'total'      => $total,
             'totalItems' => $totalItems,
+            'vatLabel'   => $vatLabel,
         ]);
     }
 

@@ -13,7 +13,7 @@ use App\Http\Controllers\LoginDetailController;
 use App\Http\Controllers\RegisterController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ContactController;
-
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\AccountInvoiceController;
 
 
@@ -147,3 +147,14 @@ Route::middleware('auth')->prefix('account')->name('account.')->group(function (
 Route::get('/product-autocomplete', [ProductAutocompleteController::class, 'index'])
     ->name('products.autocomplete');
 
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
+    ->name('newsletter.subscribe');
+
+Route::post('/account/newsletter', [NewsletterController::class, 'updatePreference'])
+    ->middleware('auth')
+    ->name('account.newsletter.update');
+
+
+Route::post('/checkout/totals', [CheckoutController::class, 'totals'])
+    ->middleware('auth')
+    ->name('checkout.totals');

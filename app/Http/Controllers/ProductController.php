@@ -14,6 +14,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $currency = strtoupper(session('currency', 'GBP'));
+        $vatRate  = strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
+        $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
         $toPennies = function ($value) {
             if ($value === null) return null;
 
@@ -277,14 +279,35 @@ class ProductController extends Controller
             'mainCategories', 
             'brands',
             'priceRange',
-            'pageTitle'
+            'pageTitle',
+            'vatRate',
+            'vatLabel'
         ));
     }
+
+    private function displayVatRateForCurrency(string $currency): float
+    {
+        return strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
+    }
+
+    private function priceForDisplayPenny(int $netPenny, float $vatRate): int
+    {
+        return (int) round($netPenny * (1 + $vatRate));
+    }
+
     
     public function show(Product $product): View
     {
 
-        $bestPrice = $product->bestPriceForCurrency();
+       $currency = strtoupper(session('currency', 'GBP'));
+        $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
+        $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
+
+        $bestPrice = $product->bestPriceForCurrency($currency); // if your method accepts currency
+        $bestPriceDisplay = ($bestPrice && isset($bestPrice->price))
+            ? $bestPrice->price * (1 + $vatRate)
+            : null;
+
 
         $primaryImage = $product->primaryImage()->first();
         $imagePath = $primaryImage
@@ -296,6 +319,9 @@ class ProductController extends Controller
         return view('products.show', compact(
             'product',
             'bestPrice',
+            'bestPriceDisplay',
+            'vatRate',
+            'vatLabel',
             'imagePath',
             'variant'
         ));

@@ -64,6 +64,36 @@
                    value="{{ ucfirst($user->user_role) }}" disabled>
         </div>
 
+        <div class="kb-newsletter-section">
+            <label class="kb-form-label">Newsletter</label>
+
+            <div class="kb-newsletter-row">
+                @if($newsletterSubscribed)
+                    <span class="kb-newsletter-status kb-newsletter-status-on">
+                        ✓ You are subscribed
+                    </span>
+
+                    <button type="submit"
+                            name="subscribed"
+                            value="0"
+                            class="kb-newsletter-btn kb-newsletter-btn-outline">
+                        Unsubscribe
+                    </button>
+                @else
+                    <span class="kb-newsletter-status kb-newsletter-status-off">
+                        Not subscribed
+                    </span>
+
+                    <button type="submit"
+                            name="subscribed"
+                            value="1"
+                            class="kb-newsletter-btn kb-newsletter-btn-primary">
+                        Subscribe
+                    </button>
+                @endif
+            </div>
+        </div>
+
         <div class="kb-form-actions">
             <button type="submit" class="kb-account-btn kb-account-btn-primary">Save Changes</button>
         </div>

@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <script src="{{ asset('js/utils/notifications.js') }}"></script>
+    <script src="{{ asset('js/utils/updatetax.js') }}"></script>
+    <script src="{{ asset('js/utils/cardValidity.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'ProFormance' }}</title>
@@ -38,7 +40,7 @@
     </main>
 
     @include('layouts.partials.footer')
-
+    @include('layouts.partials.svg-sprite')
     @yield('scripts')
 </body>
 </html>

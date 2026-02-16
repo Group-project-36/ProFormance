@@ -7,14 +7,10 @@
                 <div class="kb-hero-slide-content">
                     <h2 class="kb-hero-title">Today's Top Deals</h2>
                     <p class="kb-hero-subtitle">Don't miss these exclusive offers</p>
-
                     <div class="kb-hero-products">
                         @forelse ($heroProducts as $product)
                             @php
-                                // Get best price for this product
                                 $bestPrice = $product->bestPriceForCurrency();
-
-                                // Get primary image (first image of first variant)
                                 $primaryImage = $product->primaryImage()->first();
                                 $imagePath = $primaryImage
                                     ? 'images/' . $primaryImage->image_url
@@ -32,19 +28,30 @@
                                     </div>
 
                                     <div class="kb-product-body">
-                                        <h3 class="kb-product-name">
-                                            {{ $product->product_name }}
-                                        </h3>
+                                        <h3 class="kb-product-name">{{ $product->product_name }}</h3>
 
                                         @if($bestPrice)
+                                            @php
+                                                $rate   = $vatRate ?? 0;
+                                                $symbol = $bestPrice->symbol ?? '£';
+
+                                                $current = ($bestPrice->price ?? 0) * (1 + $rate);
+
+                                                $old = (!empty($bestPrice->was) && $bestPrice->was > ($bestPrice->price ?? 0))
+                                                    ? $bestPrice->was * (1 + $rate)
+                                                    : null;
+                                            @endphp
+
                                             <div class="kb-product-prices">
-                                                @if($bestPrice->was && $bestPrice->was > $bestPrice->price)
+                                                @if($old)
                                                     <span class="kb-product-old">
-                                                        {{ $bestPrice->symbol }}{{ number_format($bestPrice->was, 2) }}
+                                                        {{ $symbol }}{{ number_format($old, 2) }}
                                                     </span>
                                                 @endif
+
                                                 <span class="kb-product-new">
-                                                    {{ $bestPrice->symbol }}{{ number_format($bestPrice->price, 2) }}
+                                                    {{ $symbol }}{{ number_format($current, 2) }}
+                                                    <span class="kb-muted">{{ $vatLabel }}</span>
                                                 </span>
                                             </div>
                                         @else
@@ -59,9 +66,12 @@
                             <p class="kb-hero-empty">No featured products yet. Check back soon.</p>
                         @endforelse
                     </div>
+
                     <a href="{{ route('products.index') }}">
                         <button class="kb-hero-cta">View All Deals</button>
                     </a>
+
+                    
                 </div>
             </article>
 
@@ -209,18 +219,28 @@
                                 </h3>
 
                                 <div class="kb-new-card-prices">
-                                    @if($bestPrice && isset($bestPrice->was) && $bestPrice->was > $bestPrice->price)
+                                    @php
+                                        $rate   = $vatRate ?? 0;
+                                        $symbol = $bestPrice->symbol ?? '£';
+
+                                        $current = ($bestPrice && isset($bestPrice->price))
+                                            ? $bestPrice->price * (1 + $rate)
+                                            : 0;
+
+                                        $old = ($bestPrice && isset($bestPrice->was) && $bestPrice->was > $bestPrice->price)
+                                            ? $bestPrice->was * (1 + $rate)
+                                            : null;
+                                    @endphp
+
+                                    @if($old)
                                         <span class="kb-new-price-old">
-                                            {{ $bestPrice->symbol }}{{ number_format($bestPrice->was, 2) }}
+                                            {{ $symbol }}{{ number_format($old, 2) }}
                                         </span>
                                     @endif
 
                                     <span class="kb-new-price-current">
-                                        @if($bestPrice && isset($bestPrice->price))
-                                            {{ $bestPrice->symbol }}{{ number_format($bestPrice->price, 2) }}
-                                        @else
-                                            £0.00
-                                        @endif
+                                        {{ $symbol }}{{ number_format($current, 2) }}
+                                        <span class="kb-muted">{{ $vatLabel }}</span>
                                     </span>
                                 </div>
                             </div>

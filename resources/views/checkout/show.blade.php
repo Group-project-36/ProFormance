@@ -37,9 +37,12 @@
                             <div class="kb-checkout-address-options">
                                 @foreach($addresses as $address)
                                     <label class="kb-checkout-address-card">
-                                        <input type="radio" name="address_id" value="{{ $address->address_id }}"
-                                               {{ $address->is_default_shipping_address ? 'checked' : '' }}
-                                               onchange="toggleManualAddress(this)">
+                                        <input type="radio"
+                                            name="address_id"
+                                            value="{{ $address->address_id }}"
+                                            data-country="{{ $address->country_code }}"
+                                            {{ $address->is_default_shipping_address ? 'checked' : '' }}
+                                            onchange="toggleManualAddress(this)">
                                         <div class="kb-checkout-address-card-body">
                                             @if($address->is_default_shipping_address)
                                                 <span class="kb-badge kb-badge-shipping">Default</span>
@@ -52,9 +55,11 @@
                                 @endforeach
 
                                 <label class="kb-checkout-address-card kb-checkout-address-new">
-                                    <input type="radio" name="address_id" value=""
-                                           {{ $addresses->where('is_default_shipping_address', true)->isEmpty() ? 'checked' : '' }}
-                                           onchange="toggleManualAddress(this)">
+                                    <input type="radio"
+                                        name="address_id"
+                                        value=""
+                                        data-country=""
+                                        onchange="toggleManualAddress(this)">
                                     <div class="kb-checkout-address-card-body">
                                         <i class="bi bi-plus-circle"></i>
                                         <strong>New Address</strong>
@@ -129,6 +134,21 @@
                                    value="{{ old('ship_phone_number') }}">
                         </div>
                     </div>
+                </div>
+
+                <div class="kb-form-group">
+                    <label class="kb-form-label">Delivery option</label>
+
+                    <label class="kb-radio">
+                        <input type="radio" name="shipping_method" value="standard" checked>
+                        <span>Standard delivery</span>
+                    </label>
+
+                    <label class="kb-radio" id="nextDayOption">
+                        <input type="radio" name="shipping_method" value="next_day">
+                        <span>Next day delivery</span>
+                    </label>
+
                 </div>
 
                 {{-- ============ SECTION 2: BILLING ============ --}}
@@ -210,41 +230,26 @@
                         <span class="kb-checkout-step-num">3</span>
                         <h2 class="kb-checkout-section-title">Payment Method</h2>
                     </div>
-
                     <div class="kb-checkout-payment-methods">
+
+                        {{-- Card --}}
                         <label class="kb-checkout-payment-option">
-                            <input type="radio" name="payment_method" value="visa" checked
-                                   onchange="togglePayPal()">
+                            <input type="radio" name="payment_method" value="card" checked onchange="togglePayPal()">
                             <div class="kb-checkout-payment-label">
-                                <img src="{{ asset('images/payments/visa.svg') }}" alt="Visa" class="kb-payment-icon">
-                                <span>Visa</span>
+                                <span>Credit / Debit Card</span>
                             </div>
                         </label>
+
+                        {{-- PayPal --}}
                         <label class="kb-checkout-payment-option">
-                            <input type="radio" name="payment_method" value="mastercard"
-                                   onchange="togglePayPal()">
+                            <input type="radio" name="payment_method" value="paypal" onchange="togglePayPal()">
                             <div class="kb-checkout-payment-label">
-                                <img src="{{ asset('images/payments/mastercard.svg') }}" alt="Mastercard" class="kb-payment-icon">
-                                <span>Mastercard</span>
+                                <x-icon name="paypal" />
                             </div>
                         </label>
-                        <label class="kb-checkout-payment-option">
-                            <input type="radio" name="payment_method" value="amex"
-                                   onchange="togglePayPal()">
-                            <div class="kb-checkout-payment-label">
-                                <img src="{{ asset('images/payments/amex.svg') }}" alt="Amex" class="kb-payment-icon">
-                                <span>Amex</span>
-                            </div>
-                        </label>
-                        <label class="kb-checkout-payment-option">
-                            <input type="radio" name="payment_method" value="paypal"
-                                   onchange="togglePayPal()">
-                            <div class="kb-checkout-payment-label">
-                                <img src="{{ asset('images/payments/paypal.svg') }}" alt="PayPal" class="kb-payment-icon">
-                                <span hidden>PayPal</span>
-                            </div>
-                        </label>
+
                     </div>
+
 
                     @error('payment_method') <div class="kb-form-error">{{ $message }}</div> @enderror
 
@@ -260,25 +265,40 @@
 
                         <div class="kb-form-group">
                             <label class="kb-form-label">Card Number</label>
-                            <input type="text" name="card_number" class="kb-form-input"
-                                   value="{{ old('card_number') }}"
-                                   placeholder="1234 5678 9012 3456" maxlength="19">
+                            <div class="kb-input-with-icon">
+                                <input
+                                    id="card_number"
+                                    type="text"
+                                    name="card_number"
+                                    class="kb-form-input"
+                                    value="{{ old('card_number') }}"
+                                    placeholder="1234 5678 9012 3456"
+                                    maxlength="19"
+                                    autocomplete="cc-number"
+                                >
+
+                                <x-icon
+                                    name="unknown"
+                                    id="card_brand_logo"
+                                    class="kb-card-brand-logo"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <div id="card_number_help" class="kb-form-hint" style="display:none;"></div>
                             @error('card_number') <div class="kb-form-error">{{ $message }}</div> @enderror
                         </div>
 
                         <div class="kb-form-row">
                             <div class="kb-form-group">
                                 <label class="kb-form-label">Expiry Date</label>
-                                <input type="text" name="card_expiry" class="kb-form-input"
-                                       value="{{ old('card_expiry') }}"
-                                       placeholder="MM/YY" maxlength="5">
+                                <input id="card_expiry" type="text" name="card_expiry" class="kb-form-input"
+                                    value="{{ old('card_expiry') }}" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp">
                                 @error('card_expiry') <div class="kb-form-error">{{ $message }}</div> @enderror
                             </div>
                             <div class="kb-form-group">
                                 <label class="kb-form-label">CVV</label>
-                                <input type="text" name="card_cvv" class="kb-form-input"
-                                       value="{{ old('card_cvv') }}"
-                                       placeholder="123" maxlength="4">
+                                <input id="card_cvv" type="text" name="card_cvv" class="kb-form-input"
+                                    value="{{ old('card_cvv') }}" placeholder="123" maxlength="4" autocomplete="cc-csc">
                                 @error('card_cvv') <div class="kb-form-error">{{ $message }}</div> @enderror
                             </div>
                         </div>
@@ -313,12 +333,17 @@
                 {{-- SUBMIT (mobile only — desktop uses sidebar button) --}}
                 <div class="kb-checkout-submit-mobile">
                     <button type="submit" class="kb-account-btn kb-account-btn-primary kb-checkout-place-order-btn">
-                        <i class="bi bi-lock-fill"></i> Place Order — {{ $symbol }}{{ number_format($grandTotal, 2) }}
+                        <i class="bi bi-lock-fill"></i> Place Order — {{ $symbol }}{{ number_format(($totalPenny ?? 0) / 100, 2) }}
                     </button>
                 </div>
             </form>
+        </div>  
+        
+        
+        <div id="checkoutData"
+            data-totals-url="{{ route('checkout.totals') }}"
+            data-symbol="{{ $symbol }}" hidden>
         </div>
-
         {{-- RIGHT COLUMN: Order Summary --}}
         <aside class="kb-checkout-sidebar">
             <div class="kb-checkout-sidebar-sticky">
@@ -340,8 +365,12 @@
                                     <span class="kb-checkout-item-name">{{ $line['name'] }}</span>
                                     <span class="kb-checkout-item-qty">Qty: {{ $line['quantity'] }}</span>
                                 </div>
+                                @php
+                                    $unitPenny = $line['price_penny'] ?? (int) round(($line['price'] ?? 0) * 100);
+                                    $linePenny = $unitPenny * (int)($line['quantity'] ?? 0);
+                                @endphp
                                 <span class="kb-checkout-item-price">
-                                    {{ $symbol }}{{ number_format($line['price'] * $line['quantity'], 2) }}
+                                    {{ $symbol }}{{ number_format($linePenny / 100, 2) }}
                                 </span>
                             </div>
                         @endforeach
@@ -355,7 +384,7 @@
                                     <i class="bi bi-tag-fill"></i>
                                     <span><strong>{{ $appliedDiscount['discount_code'] }}</strong></span>
                                     <span class="kb-checkout-discount-amount">
-                                        -{{ $symbol }}{{ number_format($discountAmount, 2) }}
+                                        -{{ $symbol }}{{ number_format(($discountPenny ?? 0) / 100, 2) }}
                                     </span>
                                 </div>
                                 <form method="POST" action="{{ route('checkout.discount.remove') }}">
@@ -380,30 +409,38 @@
                     <div class="kb-checkout-totals">
                         <div class="kb-checkout-total-row">
                             <span>Subtotal</span>
-                            <span>{{ $symbol }}{{ number_format($total, 2) }}</span>
+                            <span id="subtotalAmount">{{ $symbol }}{{ number_format($subtotalPenny/100, 2) }}</span>
                         </div>
 
-                        @if($discountAmount > 0)
+                        @if(($discountPenny ?? 0) > 0)
                             <div class="kb-checkout-total-row kb-checkout-discount-row">
                                 <span>Discount</span>
-                                <span>-{{ $symbol }}{{ number_format($discountAmount, 2) }}</span>
+                                <span id="discountAmount">
+                                -{{ $symbol }}{{ number_format(($discountPenny ?? 0)/100, 2) }}
+                                </span>
                             </div>
                         @endif
 
                         <div class="kb-checkout-total-row">
                             <span>Shipping</span>
-                            <span>Free</span>
+                            <span id="shippingAmount">{{ $symbol }}{{ number_format(($shippingPenny ?? 0)/100, 2) }}</span>
                         </div>
 
                         <div class="kb-checkout-total-row">
-                            <span>Tax</span>
-                            <span>{{ $symbol }}0.00</span>
+                            <span id="vatLabel">VAT ({{ (int)round(($vatRate ?? 0)*100) }}%)</span>
+                            <span id="vatAmount">{{ $symbol }}{{ number_format(($taxPenny ?? 0)/100, 2) }}</span>
                         </div>
 
                         <div class="kb-checkout-total-row kb-checkout-grand-total">
                             <strong>Total</strong>
-                            <strong>{{ $symbol }}{{ number_format($grandTotal, 2) }}</strong>
+                            <strong id="totalAmount">{{ $symbol }}{{ number_format(($totalPenny ?? 0)/100, 2) }}</strong>
                         </div>
+
+                        @if(isset($shipCountryCode) && strtoupper($shipCountryCode) !== 'GB')
+                            <p class="kb-form-hint" style="margin-top: 10px;">
+                                VAT is 0% for export. Import taxes may apply in your country.
+                            </p>
+                        @endif
                     </div>
 
                     <button type="submit" form="checkout-form"

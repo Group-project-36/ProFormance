@@ -723,6 +723,53 @@
     padding-top: 1rem;
     border-top: 1px solid var(--kb-button-border);
 }
+/* ---- Newsletter ---- */
+.kb-newsletter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8f9fb;
+    padding: 14px 16px;
+    border-radius: 8px;
+}
+
+.kb-newsletter-status {
+    font-size: 0.95rem;
+}
+
+.kb-newsletter-status-on {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.kb-newsletter-status-off {
+    color: #888;
+}
+
+.kb-newsletter-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.kb-newsletter-btn-primary {
+    background: #111;
+    color: white;
+}
+
+.kb-newsletter-btn-outline {
+    background: transparent;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+}
+
+.kb-newsletter-btn-outline:hover {
+    background: #dc3545;
+    color: white;
+}
+
 
 /* ---- Pagination ---- */
 .kb-account-pagination {

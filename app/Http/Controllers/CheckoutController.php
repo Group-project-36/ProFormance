@@ -18,7 +18,6 @@ use App\Rules\CardCvv;
 use App\Support\CardBrands;
 
 
-
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -86,7 +85,21 @@ class CheckoutController extends Controller
                 ->with('error', 'Please sign in to proceed to checkout.');
         }
 
+        
+
         $cart = $this->getCart();
+
+        $giftOrders = session('gift_orders', []);
+        $isGift = false;
+
+        foreach ($cart as $line) {
+            $variantId = $line['variant_id'] ?? null;
+            if ($variantId && isset($giftOrders[$variantId])) {
+                $isGift = true;
+                $giftShippingPreview = $giftOrders[$variantId];
+                break;
+            }
+        }
 
         if (empty($cart)) {
             return redirect()->route('cart.index')
@@ -101,8 +114,23 @@ class CheckoutController extends Controller
             ->get();
 
         // Preview shipping country for VAT (default address or GB)
+        // Default shipping country (buyer default or GB)
         $defaultAddress = $addresses->first();
         $shipCountryCode = $defaultAddress?->country_code ?? 'GB';
+
+        // If cart contains a gift item, override ship country from gift address stored in session
+        $giftOrders = session('gift_orders', []);
+        $isGift = false;
+        $giftShippingPreview = null;
+
+        foreach ($cart as $line) {
+            $variantId = $line['variant_id'] ?? null;
+            if ($variantId && isset($giftOrders[$variantId])) {
+                $isGift = true;
+                $giftShippingPreview = $giftOrders[$variantId];
+                break;
+            }
+        }
 
         // Compute pennies
         $subtotalPenny = $this->cartSubtotalPenny($cart);
@@ -137,6 +165,9 @@ class CheckoutController extends Controller
             'addresses'       => $addresses,
             'user'            => $user,
             'appliedDiscount' => $appliedDiscount,
+
+            'isGift' => $isGift,
+            'giftShippingPreview' => $giftShippingPreview,
 
             // totals for display
             'subtotalPenny'   => $subtotalPenny,
@@ -313,11 +344,40 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')
                 ->with('error', 'Your basket is empty.');
         }
+        
+        // Detect gift shipping (from session + cart)
+        $giftOrders = session('gift_orders', []);
+        $cart = $this->getCart();
 
-        // Resolve shipping address
-        $shipping = $this->resolveShippingAddress($data, $user);
-        $shipCountryCode = strtoupper($shipping['country_code'] ?? 'GB');
-        $shipCountryCode = strtoupper($shipping['country_code'] ?? 'GB');
+        $giftShipping = null;
+        foreach ($cart as $line) {
+            $variantId = $line['variant_id'] ?? null;
+            if ($variantId && isset($giftOrders[$variantId])) {
+                $giftShipping = $giftOrders[$variantId];
+                break;
+            }
+        }
+
+        // ✅ Always define $shipping in one of these branches
+        if ($giftShipping) {
+            $shipping = [
+                'address_id'       => $giftShipping['address_id'] ?? null,
+                'recipient_name'   => $giftShipping['recipient_name'] ?? null,
+                'house_number'     => $giftShipping['house_number'] ?? null,
+                'address_line_one' => $giftShipping['address_line_one'] ?? null,
+                'address_line_two' => $giftShipping['address_line_two'] ?? null,
+                'city'             => $giftShipping['city'] ?? null,
+                'county'           => $giftShipping['county'] ?? null,
+                'postcode'         => $giftShipping['postcode'] ?? null,
+                'country_code'     => $giftShipping['country_code'] ?? null,
+                'phone_number'     => $giftShipping['phone_number'] ?? null,
+            ];
+        } else {
+            $shipping = $this->resolveShippingAddress($data, $user);
+        }
+
+
+    $shipCountryCode = strtoupper($shipping['country_code'] ?? 'GB');
         $shippingMethod = $data['shipping_method'] ?? 'standard';
 
         // Resolve billing address
@@ -390,14 +450,6 @@ class CheckoutController extends Controller
         $shippingMethod = $data['shipping_method'] ?? 'standard';
         $shippingPenny = $this->shippingPennyFor($shipCountryCode, $shippingMethod);
         $totalPenny = max(0, $taxablePenny + $taxPenny + $shippingPenny);
-        \Log::info('CHECKOUT VAT DEBUG', [
-            'ship_country' => $shipCountryCode,
-            'subtotal' => $subtotalPenny,
-            'discount' => $discountPenny,
-            'vatRate' => $vatRate,
-            'taxPenny' => $taxPenny,
-            'totalPenny' => $totalPenny,
-            ]);
         DB::transaction(function () use (
             $cart, $user, $shipping, $billing, $data,
             $subtotalPenny, $shippingPenny, $taxPenny, $discountPenny, $totalPenny,
@@ -510,6 +562,7 @@ class CheckoutController extends Controller
             // Clear cart and discount
             $request->session()->forget('cart');
             $request->session()->forget('checkout_discount');
+            $request->session()->forget('gift_orders');
         });
 
         return redirect()->route('account.orders')

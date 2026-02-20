@@ -23,6 +23,8 @@ use App\Http\Controllers\AccountAddressController;
 use App\Http\Controllers\AccountSecurityController;
 use App\Http\Controllers\AccountReviewController;
 
+use App\Http\Controllers\ReviewController;
+
 
 Route::post('/currency', [PreferenceController::class, 'updateCurrency'])
     ->name('currency.update');
@@ -61,19 +63,6 @@ Route::get('/brand/{brand}', function($brand) {
 
 
 
-Route::prefix('wishlist')->name('wishlist.')->group(function () {
-    Route::post('/add', function() {
-        return response()->json(['success' => true, 'message' => 'Wishlist feature coming soon']);
-    })->name('add');
-    
-    Route::post('/remove', function() {
-        return response()->json(['success' => true, 'message' => 'Wishlist feature coming soon']);
-    })->name('remove');
-    
-    Route::get('/', function() {
-        return 'Wishlist page - Coming soon';
-    })->name('index');
-});
 
 
 Route::middleware('guest')->group(function () {
@@ -158,3 +147,30 @@ Route::post('/account/newsletter', [NewsletterController::class, 'updatePreferen
 Route::post('/checkout/totals', [CheckoutController::class, 'totals'])
     ->middleware('auth')
     ->name('checkout.totals');
+
+// Wishlist (requires login)
+Route::middleware('auth')->group(function () {
+    Route::get('/wishlist',                       [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist',                      [WishlistController::class, 'store'])->name('wishlist.store');
+    Route::get('/wishlist/{wishlistId}',           [WishlistController::class, 'show'])->name('wishlist.show');
+    Route::put('/wishlist/{wishlistId}',           [WishlistController::class, 'update'])->name('wishlist.update');
+    Route::delete('/wishlist/{wishlistId}',        [WishlistController::class, 'destroy'])->name('wishlist.destroy');
+    Route::post('/wishlist/{wishlistId}/share',    [WishlistController::class, 'toggleShare'])->name('wishlist.toggleShare');
+    Route::post('/wishlist/toggle',               [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::post('/wishlist/remove',               [WishlistController::class, 'remove'])->name('wishlist.remove');
+});
+
+// Public shared wishlist (by slug — nice short URL)
+Route::get('/w/{slug}', [WishlistController::class, 'shared'])->name('wishlist.shared');
+
+// Gift purchase from shared wishlist
+Route::post('/wishlist/gift-add', [WishlistController::class, 'giftAddToCart'])->name('wishlist.giftAdd');
+
+// Reviews (requires login)
+Route::middleware('auth')->group(function () {
+    Route::post('/products/{productId}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+});
+
+Route::get('/test-cards', function () {
+    return view('test-cards');
+})->name('test.cards');

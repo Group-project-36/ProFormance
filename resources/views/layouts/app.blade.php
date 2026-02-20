@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="{{ asset('js/utils/colourFlash.js') }}"></script>
+    <script src="{{ asset('js/utils/colourMode.js') }}"></script>
     <script src="{{ asset('js/utils/notifications.js') }}"></script>
     <script src="{{ asset('js/utils/updatetax.js') }}"></script>
     <script src="{{ asset('js/utils/cardValidity.js') }}"></script>
@@ -9,11 +11,15 @@
     <title>{{ $title ?? 'ProFormance' }}</title>
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/phone.css') }}">
+    {{-- <link rel="stylesheet" href="{{ asset('css/phone.css') }}">
     <link rel="stylesheet" href="{{ asset('css/contact.css') }}">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}">
     <link rel="stylesheet" href="{{ asset('css/checkout.css') }}">
     <link rel="stylesheet" href="{{ asset('css/notification.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/wishlist-reviews.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/wishlist-v2-additions.css') }}"> --}}
+    
+    
 
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
 

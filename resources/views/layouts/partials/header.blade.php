@@ -186,6 +186,11 @@
                     @endauth
                 </div>
             </div>
+            <div>
+                <button id="theme-toggle" type="button" class="theme-toggle-btn">
+                    <i class="bi bi-moon-fill" id="theme-icon"></i>
+                </button>
+            </div>
     </div>     
 </div>
 

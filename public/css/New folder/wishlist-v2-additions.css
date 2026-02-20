@@ -1,0 +1,250 @@
+/* ============================= */
+/*    Wishlist v2 — additions    */
+/* ============================= */
+/* Append this to your wishlist-reviews.css */
+
+/* ---- Back Link ---- */
+.kb-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--kb-font-size-sm);
+    color: var(--kb-secondary-font);
+    text-decoration: none;
+    margin-bottom: 1rem;
+}
+
+.kb-back-link:hover {
+    color: var(--kb-primary-font);
+}
+
+/* ---- Wishlists Grid (multi-wishlist index) ---- */
+.kb-wishlists-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.kb-wishlists-card {
+    background: var(--kb-primary-bg);
+    border: 1px solid var(--kb-button-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.kb-wishlists-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.kb-wishlists-card-name {
+    font-size: var(--kb-font-size-lg);
+    font-weight: 600;
+    margin: 0;
+}
+
+.kb-wishlists-card-name a {
+    color: var(--kb-primary-font);
+    text-decoration: none;
+}
+
+.kb-wishlists-card-name a:hover {
+    text-decoration: underline;
+}
+
+.kb-wishlists-card-count {
+    font-size: var(--kb-font-size-sm);
+    color: var(--kb-secondary-font);
+}
+
+.kb-wishlists-card-badges {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.kb-badge-public {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.kb-badge-private {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.kb-badge-gift {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.kb-wishlists-card-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #f9fafb;
+    border: 1px solid var(--kb-button-border);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.kb-wishlists-card-link code {
+    flex: 1;
+    font-size: var(--kb-font-size-xsm);
+    color: var(--kb-secondary-font);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kb-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--kb-secondary-font);
+    font-size: 1rem;
+    padding: 0.25rem;
+}
+
+.kb-copy-btn:hover {
+    color: var(--kb-primary-font);
+}
+
+.kb-wishlists-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ---- Button Sizes ---- */
+.kb-account-btn-sm {
+    padding: 0.4rem 0.75rem;
+    font-size: var(--kb-font-size-xsm);
+}
+
+.kb-btn-danger-outline {
+    color: var(--kb-sale-red);
+    border-color: var(--kb-sale-red);
+}
+
+.kb-btn-danger-outline:hover {
+    background: #fef2f2;
+}
+
+/* ---- Gift Button ---- */
+.kb-account-btn-gift {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: var(--kb-font-size-sm);
+    font-weight: 600;
+    font-family: var(--kb-font-family);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kb-account-btn-gift:hover {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    transform: translateY(-1px);
+}
+
+/* ---- Gift Banner ---- */
+.kb-wishlist-gift-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #fbbf24;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.kb-wishlist-gift-banner i {
+    font-size: 1.5rem;
+    color: #92400e;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+}
+
+.kb-wishlist-gift-banner strong {
+    display: block;
+    font-size: var(--kb-font-size-sm);
+    color: #78350f;
+}
+
+.kb-wishlist-gift-banner p {
+    font-size: var(--kb-font-size-xsm);
+    color: #92400e;
+    margin: 0.25rem 0 0;
+}
+
+.kb-wishlist-shared-name {
+    font-style: italic;
+}
+
+/* ---- Modal ---- */
+.kb-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.kb-modal {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.kb-modal h3 {
+    font-size: var(--kb-font-size-lg);
+    font-weight: 700;
+    margin: 0 0 1.25rem;
+}
+
+.kb-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.kb-form-hint {
+    display: block;
+    font-size: var(--kb-font-size-xsm);
+    color: var(--kb-secondary-font);
+    margin-top: 0.3rem;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .kb-wishlists-card-top {
+        flex-direction: column;
+    }
+
+    .kb-wishlists-card-actions {
+        flex-direction: column;
+    }
+
+    .kb-wishlists-card-actions .kb-account-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

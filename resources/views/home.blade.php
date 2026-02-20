@@ -68,7 +68,7 @@
                     </div>
 
                     <a href="{{ route('products.index') }}">
-                        <button class="kb-hero-cta">View All Deals</button>
+                        <button class="kb-view-all-btn">View All Deals</button>
                     </a>
 
                     
@@ -106,7 +106,7 @@
                             <p class="kb-hero-subtitle">
                                 Fresh drops in gym wear, limited edition flavours, and collabs landing soon.
                             </p>
-                            <button class="kb-hero-cta">Discover upcoming releases</button>
+                            <button class="kb-view-all-btn">Discover upcoming releases</button>
                         </div>
                     </div>
                 </article>
@@ -131,26 +131,6 @@
                     <button class="kb-carousel-btn kb-carousel-btn--next" aria-label="Next products">›</button>
                 </div>
             </div>
-            <!-- <form method="POST" action="{{ route('cart.add') }}" style="padding: 2rem; border: 1px solid #ccc;">
-                @csrf
-
-                <h2>Test Add to Cart</h2>
-
-                <input type="hidden" name="product_id" value="123">
-                <input type="hidden" name="name" value="Debug Product">
-                <input type="hidden" name="price" value="12.34">
-                <input type="hidden" name="variant_name" value="">
-                <input type="hidden" name="image" value="">
-
-                <label>
-                    Quantity:
-                    <input type="number" name="quantity" value="1" min="1">
-                </label>
-
-                <button type="submit">Add debug product to cart</button>
-            </form> -->
-
-
             <div class="kb-new-carousel-container">
                 <div class="kb-new-carousel-track">
                     @forelse ($newProducts as $product)
@@ -258,13 +238,15 @@
                                     </button>
                                 @endif
 
-                                <button
-                                    type="button"
-                                    class="kb-new-icon-btn"
-                                    aria-label="Add to wishlist"
-                                >
-                                    <i class="bi bi-heart"></i>
-                                </button>
+                                @if($variant)
+                                    <button type="button"
+                                            class="kb-wishlist-heart {{ in_array($variant->variant_id, $wishlistVariantIds ?? []) ? 'kb-wishlisted' : '' }}"
+                                            data-variant-id="{{ $variant->variant_id }}"
+                                            onclick="toggleWishlistCard(this)"
+                                            aria-label="Add to wishlist">
+                                        <i class="bi {{ in_array($variant->variant_id, $wishlistVariantIds ?? []) ? 'bi-heart-fill' : 'bi-heart' }}"></i>
+                                    </button>
+                                @endif
 
                                 <a
                                     href="{{ route('products.index') }}"

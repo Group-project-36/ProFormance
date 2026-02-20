@@ -76,19 +76,30 @@
     </div>
 
     <div class="kb-account-card">
-        <h2 class="kb-account-card-title">Shipping Address</h2>
-        <div class="kb-address-display">
-            <p>{{ $order->ship_recipient_name }}</p>
-            <p>{{ $order->ship_house_number }} {{ $order->ship_address_line_one }}</p>
-            @if($order->ship_address_line_two)
-                <p>{{ $order->ship_address_line_two }}</p>
-            @endif
-            <p>{{ $order->ship_city }}{{ $order->ship_county ? ', ' . $order->ship_county : '' }}</p>
-            <p>{{ $order->ship_postcode }}</p>
-            @if($order->ship_phone_number)
-                <p><i class="bi bi-telephone"></i> {{ $order->ship_phone_number }}</p>
-            @endif
-        </div>
+        <h2 class="kb-account-card-title">Shipping</h2>
+
+        @if(!empty($isGift) && $isGift)
+            <div class="kb-address-display">
+                <p><strong>Gift Delivery</strong></p>
+                <p>Recipient: {{ $order->ship_recipient_name }}</p>
+                <p class="kb-form-hint">
+                    Delivered to the recipient’s chosen address.
+                </p>
+            </div>
+        @else
+            <div class="kb-address-display">
+                <p>{{ $order->ship_recipient_name }}</p>
+                <p>{{ $order->ship_house_number }} {{ $order->ship_address_line_one }}</p>
+                @if($order->ship_address_line_two)
+                    <p>{{ $order->ship_address_line_two }}</p>
+                @endif
+                <p>{{ $order->ship_city }}{{ $order->ship_county ? ', ' . $order->ship_county : '' }}</p>
+                <p>{{ $order->ship_postcode }}</p>
+                @if($order->ship_phone_number)
+                    <p><i class="bi bi-telephone"></i> {{ $order->ship_phone_number }}</p>
+                @endif
+            </div>
+        @endif
     </div>
 </div>
 @endsection

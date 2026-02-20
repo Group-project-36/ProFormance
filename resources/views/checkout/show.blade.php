@@ -22,14 +22,36 @@
 
             <form method="POST" action="{{ route('checkout.store') }}" id="checkout-form">
                 @csrf
-
+                
+            
                 {{-- ============ SECTION 1: SHIPPING ============ --}}
                 <div class="kb-checkout-section">
                     <div class="kb-checkout-section-header">
                         <span class="kb-checkout-step-num">1</span>
                         <h2 class="kb-checkout-section-title">Shipping Address</h2>
                     </div>
+                    @if($isGift && $giftShippingPreview)
 
+                    <div class="alert alert-info">
+                        This is a gift order. Shipping address is set from the wishlist owner's delivery address.
+                    </div> 
+
+                    {{-- Hidden shipping fields so validation passes --}}
+                    <input type="hidden" name="address_id" value="">
+
+                    <input type="hidden" name="ship_recipient_name" value="{{ $giftShippingPreview['recipient_name'] }}">
+                    <input type="hidden" name="ship_house_number" value="{{ $giftShippingPreview['house_number'] }}">
+                    <input type="hidden" name="ship_address_line_one" value="{{ $giftShippingPreview['address_line_one'] }}">
+                    <input type="hidden" name="ship_address_line_two" value="{{ $giftShippingPreview['address_line_two'] }}">
+                    <input type="hidden" name="ship_city" value="{{ $giftShippingPreview['city'] }}">
+                    <input type="hidden" name="ship_county" value="{{ $giftShippingPreview['county'] }}">
+                    <input type="hidden" name="ship_postcode" value="{{ $giftShippingPreview['postcode'] }}">
+                    <input type="hidden" name="ship_country_code" value="{{ $giftShippingPreview['country_code'] }}">
+                    <input type="hidden" name="ship_phone_number" value="{{ $giftShippingPreview['phone_number'] }}">
+
+                @endif
+
+                @if(!$isGift)
                     @if($addresses->isNotEmpty())
                         <div class="kb-checkout-saved-addresses">
                             <p class="kb-checkout-hint">Select a saved address or enter a new one below.</p>
@@ -135,6 +157,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 <div class="kb-form-group">
                     <label class="kb-form-label">Delivery option</label>
@@ -150,6 +173,7 @@
                     </label>
 
                 </div>
+            
 
                 {{-- ============ SECTION 2: BILLING ============ --}}
                 <div class="kb-checkout-section">
@@ -231,6 +255,9 @@
                         <h2 class="kb-checkout-section-title">Payment Method</h2>
                     </div>
                     <div class="kb-checkout-payment-methods">
+                        <a href="{{ route('test.cards') }}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="bi bi-info-circle"></i>
+                        </a>
 
                         {{-- Card --}}
                         <label class="kb-checkout-payment-option">

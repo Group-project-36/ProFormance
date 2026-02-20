@@ -35,6 +35,11 @@
                     <i class="bi bi-bag"></i>
                     <span>My Orders</span>
                 </a>
+                <a href="{{ route('wishlist.index') }}"
+                   class="kb-account-nav-item {{ request()->routeIs('wishlist.index') ? 'active' : '' }}">
+                    <i class="bi bi-heart"></i>
+                    <span>Wishlist</span>
+                </a>
                 <a href="{{ route('account.addresses') }}"
                    class="kb-account-nav-item {{ request()->routeIs('account.addresses*') ? 'active' : '' }}">
                     <i class="bi bi-geo-alt"></i>

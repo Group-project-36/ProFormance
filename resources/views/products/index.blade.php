@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+<link rel="stylesheet" href="{{ asset('css/wishlist-reviews.css') }}">
+
 <div class="kb-products-page">
     <div class="kb-products-container">
         <div class="kb-products-header">
@@ -21,18 +23,14 @@
                             <input type="hidden" name="deals" value="1">
                         @endif
 
-
-                        {{-- Preserve categories (array) --}}
                         @foreach((array) request('category', []) as $cat)
                             <input type="hidden" name="category[]" value="{{ $cat }}">
                         @endforeach
 
-                        {{-- Preserve brands (array) --}}
                         @foreach((array) request('brand', []) as $b)
                             <input type="hidden" name="brand[]" value="{{ $b }}">
                         @endforeach
 
-                        {{-- Preserve price --}}
                         @if(request()->filled('min_price'))
                             <input type="hidden" name="min_price" value="{{ request('min_price') }}">
                         @endif
@@ -40,7 +38,6 @@
                             <input type="hidden" name="max_price" value="{{ request('max_price') }}">
                         @endif
 
-                        {{-- Preserve per page if you use it --}}
                         @if(request()->filled('per_page'))
                             <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                         @endif
@@ -86,10 +83,9 @@
                     @foreach($mainCategories as $parent)
                         <div class="kb-filter-parent">
                             @php
-                                // Keep current query but replace categories with this parent
                                 $parentUrl = request()->fullUrlWithQuery([
                                     'category' => [$parent->category_id],
-                                    'page' => null, // reset pagination when changing category
+                                    'page' => null,
                                 ]);
                             @endphp
 
@@ -97,7 +93,6 @@
                                 <span>{{ $parent->category_name }}</span>
                                 <span class="kb-filter-count">({{ $parent->products_total ?? 0 }})</span>
                             </a>
-
 
                             @if($parent->children->count())
                                 <div class="kb-filter-children">
@@ -147,16 +142,11 @@
                     <div class="kb-products-grid">
                         @foreach($products as $product)
                             @php
-                                // Get best price for this product
                                 $bestPrice = $product->bestPriceForCurrency();
-
-                                // Get primary image (first variant image)
                                 $primaryImage = $product->primaryImage()->first();
                                 $imagePath = $primaryImage
                                     ? 'images/' . $primaryImage->image_url
                                     : 'images/placeholders/product-placeholder.jpg';
-
-                                // Get first variant
                                 $variant = $product->variants()->first() ?? null;
                             @endphp
 
@@ -169,6 +159,17 @@
 
                                     @if($bestPrice && $bestPrice->was && $bestPrice->was > $bestPrice->price)
                                         <span class="kb-product-badge kb-product-badge--sale">Sale</span>
+                                    @endif
+
+                                    {{-- WISHLIST HEART --}}
+                                    @if($variant)
+                                        <button type="button"
+                                                class="kb-wishlist-heart {{ in_array($variant->variant_id, $wishlistVariantIds ?? []) ? 'kb-wishlisted' : '' }}"
+                                                data-variant-id="{{ $variant->variant_id }}"
+                                                onclick="toggleWishlistCard(this)"
+                                                aria-label="Add to wishlist">
+                                            <i class="bi {{ in_array($variant->variant_id, $wishlistVariantIds ?? []) ? 'bi-heart-fill' : 'bi-heart' }}"></i>
+                                        </button>
                                     @endif
 
                                     <a href="{{ route('products.show', $product->product_id) }}">
@@ -273,10 +274,40 @@
                 @endif
 
             </main>
-            
-
-            
         </div>
     </div>
 </div>
+
+{{-- Wishlist AJAX --}}
+<script>
+function toggleWishlistCard(btn) {
+    const variantId = btn.dataset.variantId;
+    const icon = btn.querySelector('i');
+
+    fetch('{{ route("wishlist.toggle") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ variant_id: variantId }),
+    })
+    .then(res => {
+        if (res.status === 401) { window.location.href = '{{ route("login") }}'; return; }
+        return res.json();
+    })
+    .then(data => {
+        if (!data) return;
+        if (data.in_wishlist) {
+            btn.classList.add('kb-wishlisted');
+            icon.className = 'bi bi-heart-fill';
+        } else {
+            btn.classList.remove('kb-wishlisted');
+            icon.className = 'bi bi-heart';
+        }
+    })
+    .catch(err => console.error('Wishlist error:', err));
+}
+</script>
 @endsection

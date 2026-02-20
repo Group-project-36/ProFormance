@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
+use App\Models\Address;
 
 class AccountOrderController extends Controller
 {
@@ -40,6 +41,14 @@ class AccountOrderController extends Controller
             ->with('items')
             ->firstOrFail();
 
-        return view('account.order-detail', compact('order'));
+        $isGift = false;
+
+        if (!empty($order->shipping_address_id)) {
+            $isGift = Address::where('address_id', $order->shipping_address_id)
+                ->where('user_id', '!=', $order->user_id)
+                ->exists();
+        }
+
+        return view('account.order-detail', compact('order', 'isGift'));
     }
 }

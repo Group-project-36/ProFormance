@@ -7,6 +7,16 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+
+
+use App\Models\Brand;
+use App\Models\Review;
+use App\Models\Wishlist;
+use App\Models\WishlistItem;
+use Illuminate\Support\Facades\Auth;
+
+use Illuminate\View\View;
+
 class HomeController extends Controller
 {
     public function index()
@@ -15,6 +25,15 @@ class HomeController extends Controller
         $vatRate = $this->displayVatRateForCurrency($currency);
         $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
 
+        $wishlistVariantIds = [];
+        if (Auth::check()) {
+            $wl = Wishlist::where('user_id', Auth::user()->user_id)->first();
+            if ($wl) {
+                $wishlistVariantIds = WishlistItem::where('wishlists_id', $wl->wishlist_id)
+                    ->pluck('variant_id')
+                    ->all();
+            }
+        }
 
         $products = DB::table('products as p')
             ->join('product_variants as pv', 'pv.product_id', '=', 'p.product_id')
@@ -86,6 +105,7 @@ class HomeController extends Controller
     {
         return strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
     }
+
 
     private function priceForDisplayPenny(int $netPenny, float $vatRate): int
     {

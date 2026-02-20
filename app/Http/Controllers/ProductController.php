@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
+use App\Models\Review;
+use App\Models\Wishlist;
+use App\Models\WishlistItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -273,7 +277,17 @@ class ProductController extends Controller
             )
             ->first();
 
-        
+        // ---- NEW: Build wishlist variant IDs for the current user ----
+        $wishlistVariantIds = [];
+        if (Auth::check()) {
+            $wl = Wishlist::where('user_id', Auth::user()->user_id)->first();
+            if ($wl) {
+                $wishlistVariantIds = WishlistItem::where('wishlists_id', $wl->wishlist_id)
+                    ->pluck('variant_id')
+                    ->all();
+            }
+        }
+
         return view('products.index', compact(
             'products', 
             'mainCategories', 
@@ -281,7 +295,8 @@ class ProductController extends Controller
             'priceRange',
             'pageTitle',
             'vatRate',
-            'vatLabel'
+            'vatLabel',
+            'wishlistVariantIds'
         ));
     }
 
@@ -298,16 +313,14 @@ class ProductController extends Controller
     
     public function show(Product $product): View
     {
-
-       $currency = strtoupper(session('currency', 'GBP'));
+        $currency = strtoupper(session('currency', 'GBP'));
         $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
         $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
 
-        $bestPrice = $product->bestPriceForCurrency($currency); // if your method accepts currency
+        $bestPrice = $product->bestPriceForCurrency($currency);
         $bestPriceDisplay = ($bestPrice && isset($bestPrice->price))
             ? $bestPrice->price * (1 + $vatRate)
             : null;
-
 
         $primaryImage = $product->primaryImage()->first();
         $imagePath = $primaryImage
@@ -316,6 +329,36 @@ class ProductController extends Controller
 
         $variant = $product->variants()->first();
 
+        // ---- NEW: Reviews ----
+        $reviews = Review::where('product_id', $product->product_id)
+            ->where('is_approved', true)
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $reviewStats = [
+            'count' => $reviews->count(),
+            'avg'   => $reviews->count() > 0 ? round($reviews->avg('rating'), 1) : 0,
+        ];
+
+        $userReview = null;
+        if (Auth::check()) {
+            $userReview = Review::where('user_id', Auth::user()->user_id)
+                ->where('product_id', $product->product_id)
+                ->first();
+        }
+
+        // ---- NEW: Wishlist status ----
+        $inWishlist = false;
+        if (Auth::check() && $variant) {
+            $wishlist = Wishlist::where('user_id', Auth::user()->user_id)->first();
+            if ($wishlist) {
+                $inWishlist = WishlistItem::where('wishlists_id', $wishlist->wishlist_id)
+                    ->where('variant_id', $variant->variant_id)
+                    ->exists();
+            }
+        }
+
         return view('products.show', compact(
             'product',
             'bestPrice',
@@ -323,7 +366,11 @@ class ProductController extends Controller
             'vatRate',
             'vatLabel',
             'imagePath',
-            'variant'
+            'variant',
+            'reviews',
+            'reviewStats',
+            'userReview',
+            'inWishlist'
         ));
     }   
 
@@ -341,6 +388,4 @@ class ProductController extends Controller
 
         return $this->index($request);
     }
-
-
 }

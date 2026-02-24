@@ -1,19 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script sac="{{ asset('js/theme.js') }}"></script>
-    <script src="{{ asset('js/carousel.js') }}"></script>
-    <script src="{{ asset('js/wishlist.js') }}"></script>
-    <script src="{{ asset('js/wishlist.js') }}"></script>
-    <script src="{{ asset('js/checkout.js') }}"></script>
-    <script src="{{ asset('js/card-validation.js') }}"></script>
-    <script src="{{ asset('js/password-security.js') }}"></script>
-    <script>
-        const breachCheckUrl = '{{ route("password.checkBreach") }}';
-        const csrfToken = '{{ csrf_token() }}';
-    </script>
-    <script src="{{ asset('js/password-security.js') }}"></script>
-    <script src="{{ asset('js/product-search.js') }}"></script>
+    {{-- Theme must load first in <head> to prevent flash of wrong theme --}}
+    <script src="{{ asset('js/theme.js') }}"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'ProFormance' }}</title>
@@ -27,8 +17,6 @@
     <link rel="stylesheet" href="{{ asset('css/notification.css') }}">
     <link rel="stylesheet" href="{{ asset('css/wishlist-reviews.css') }}">
     <link rel="stylesheet" href="{{ asset('css/wishlist-v2-additions.css') }}">
-    
-    
 
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
 
@@ -55,11 +43,15 @@
     @include('layouts.partials.cookie')
     @include('layouts.partials.footer')
     @include('layouts.partials.svg-sprite')
-    @yield('scripts')
 
+    {{-- ── Global scripts (every page) ── --}}
     <script src="{{ asset('js/notifications.js') }}"></script>
     <script src="{{ asset('js/navigation.js') }}"></script>
     <script src="{{ asset('js/cart.js') }}"></script>
     <script src="{{ asset('js/cookie-banner.js') }}"></script>
+    <script src="{{ asset('js/wishlist.js') }}"></script>
+
+    {{-- ── Page-specific scripts injected by child views ── --}}
+    @yield('scripts')
 </body>
 </html>

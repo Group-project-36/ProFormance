@@ -18,8 +18,6 @@ class CardCvv implements ValidationRule
         $brand = CardBrands::detect($pan);
 
         if (!$brand || !CardBrands::isSupported($brand)) {
-            // CardNumberSupported will handle unsupported/unknown;
-            // don't double-fail CVV noisily.
             return;
         }
 

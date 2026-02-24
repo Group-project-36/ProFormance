@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\Review;
@@ -202,10 +203,8 @@ class ProductController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        // helper to apply the same filters to a Product query
         $applyCountFilters = function ($countQuery) use ($request, $currency, $toPennies) {
 
-            // currency + price filters
             $minPennies = $toPennies($request->input('min_price'));
             $maxPennies = $toPennies($request->input('max_price'));
 
@@ -216,7 +215,6 @@ class ProductController extends Controller
                 if ($maxPennies !== null) $q->where('price_penny', '<=', $maxPennies);
             });
 
-            // search
             if ($request->filled('search')) {
                 $searchTerm = $request->search;
                 $countQuery->where(function ($q) use ($searchTerm) {
@@ -226,7 +224,6 @@ class ProductController extends Controller
                 });
             }
 
-            // brands (multi-select)
             if ($request->filled('brand')) {
                 $input = (array) $request->brand;
                 $idInputs   = array_filter($input, fn ($b) => is_numeric($b));
@@ -247,8 +244,6 @@ class ProductController extends Controller
         };
 
         $mainCategories->each(function ($parent) use ($applyCountFilters) {
-
-            // count for each child
             $parent->children->each(function ($child) use ($applyCountFilters) {
                 $countQuery = Product::query()
                     ->where('products.is_active', true)
@@ -259,7 +254,6 @@ class ProductController extends Controller
                     ->count('products.product_id');
             });
 
-            // parent total = sum of children counts
             $parent->products_total = (int) $parent->children->sum('products_count');
         });
 
@@ -277,7 +271,7 @@ class ProductController extends Controller
             )
             ->first();
 
-        // ---- NEW: Build wishlist variant IDs for the current user ----
+        // Wishlist variant IDs for current user
         $wishlistVariantIds = [];
         if (Auth::check()) {
             $wl = Wishlist::where('user_id', Auth::user()->user_id)->first();
@@ -317,19 +311,93 @@ class ProductController extends Controller
         $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
         $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
 
+        $product->load([
+            'activeVariants.options.attribute',
+            'activeVariants.images',
+            'activeVariants.prices',
+            'activeVariants.inventory',
+            'brand',
+            'categories',
+        ]);
+
+        $variants = $product->activeVariants;
+        $defaultVariant = $variants->first();
         $bestPrice = $product->bestPriceForCurrency($currency);
-        $bestPriceDisplay = ($bestPrice && isset($bestPrice->price))
-            ? $bestPrice->price * (1 + $vatRate)
-            : null;
 
-        $primaryImage = $product->primaryImage()->first();
-        $imagePath = $primaryImage
-            ? 'images/' . $primaryImage->image_url
-            : 'images/placeholders/product-placeholder.jpg';
+        $attributeMap = [];
+        foreach ($variants as $variant) {
+            foreach ($variant->options as $option) {
+                $attrName = $option->attribute->display_name;
+                $attrId   = $option->attribute->attribute_id;
+                $optValue = $option->display_value;
+                $optId    = $option->option_id;
 
-        $variant = $product->variants()->first();
+                if (!isset($attributeMap[$attrId])) {
+                    $attributeMap[$attrId] = [
+                        'name'    => $attrName,
+                        'order'   => $option->attribute->selection_order,
+                        'options' => [],
+                    ];
+                }
 
-        // ---- NEW: Reviews ----
+                if (!isset($attributeMap[$attrId]['options'][$optId])) {
+                    $attributeMap[$attrId]['options'][$optId] = [
+                        'value'      => $optValue,
+                        'sort_order' => $option->sort_order,
+                    ];
+                }
+            }
+        }
+
+        uasort($attributeMap, fn($a, $b) => $a['order'] <=> $b['order']);
+        foreach ($attributeMap as &$attr) {
+            uasort($attr['options'], fn($a, $b) => $a['sort_order'] <=> $b['sort_order']);
+        }
+        unset($attr);
+
+        $variantsJson = $variants->map(function ($v) use ($currency, $vatRate) {
+            $price = $v->priceForCurrency($currency);
+            $inv   = $v->inventory;
+            $stock = $inv ? max(0, $inv->available_stock - $inv->stock_allocated) : 0;
+
+            return [
+                'id'         => $v->variant_id,
+                'sku'        => $v->sku,
+                'title'      => $v->title,
+                'stock'      => $stock,
+                'options'    => $v->options->pluck('option_id')->toArray(),
+                'price'      => $price ? round(($price->price_penny / 100) * (1 + $vatRate), 2) : null,
+                'was_price'  => ($price && $price->was_price_penny) ? round(($price->was_price_penny / 100) * (1 + $vatRate), 2) : null,
+                'images'     => $v->images->sortBy('sort_order')->map(fn($img) => [
+                    'url' => $img->image_url,
+                    'alt' => $img->alt_text ?? $v->title,
+                ])->values()->toArray(),
+            ];
+        })->values()->toArray();
+
+        $allImages = $variants->flatMap(function ($v) {
+            return $v->images->map(fn($img) => [
+                'url'        => $img->image_url,
+                'alt'        => $img->alt_text ?? 'Product image',
+                'variant_id' => $v->variant_id,
+                'sort_order' => $img->sort_order,
+            ]);
+        })->sortBy('sort_order')->values()->toArray();
+
+        if (empty($allImages)) {
+            $allImages = [['url' => 'placeholders/product-placeholder.jpg', 'alt' => 'No image available', 'variant_id' => null, 'sort_order' => 0]];
+        }
+
+        $specifications = DB::table('product_specifications')
+            ->where('product_id', $product->product_id)
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('spec_group');
+        $defaultStock = 0;
+        if ($defaultVariant && $defaultVariant->inventory) {
+            $defaultStock = max(0, $defaultVariant->inventory->available_stock - $defaultVariant->inventory->stock_allocated);
+        }
+
         $reviews = Review::where('product_id', $product->product_id)
             ->where('is_approved', true)
             ->with('user')
@@ -347,14 +415,12 @@ class ProductController extends Controller
                 ->where('product_id', $product->product_id)
                 ->first();
         }
-
-        // ---- NEW: Wishlist status ----
         $inWishlist = false;
-        if (Auth::check() && $variant) {
+        if (Auth::check() && $defaultVariant) {
             $wishlist = Wishlist::where('user_id', Auth::user()->user_id)->first();
             if ($wishlist) {
                 $inWishlist = WishlistItem::where('wishlists_id', $wishlist->wishlist_id)
-                    ->where('variant_id', $variant->variant_id)
+                    ->where('variant_id', $defaultVariant->variant_id)
                     ->exists();
             }
         }
@@ -362,17 +428,50 @@ class ProductController extends Controller
         return view('products.show', compact(
             'product',
             'bestPrice',
-            'bestPriceDisplay',
             'vatRate',
             'vatLabel',
-            'imagePath',
-            'variant',
+            'variants',
+            'defaultVariant',
+            'attributeMap',
+            'variantsJson',
+            'allImages',
+            'specifications',
+            'defaultStock',
+            'currency',
             'reviews',
             'reviewStats',
             'userReview',
             'inWishlist'
         ));
-    }   
+    }
+
+    public function getVariant(Request $request)
+    {
+        $request->validate([
+            'variant_id' => 'required|integer|exists:product_variants,variant_id',
+        ]);
+
+        $currency = strtoupper(session('currency', 'GBP'));
+        $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
+
+        $variant = ProductVariant::with(['images', 'prices', 'inventory', 'options'])->find($request->variant_id);
+        $price   = $variant->priceForCurrency($currency);
+        $inv     = $variant->inventory;
+        $stock   = $inv ? max(0, $inv->available_stock - $inv->stock_allocated) : 0;
+
+        return response()->json([
+            'id'        => $variant->variant_id,
+            'sku'       => $variant->sku,
+            'title'     => $variant->title,
+            'stock'     => $stock,
+            'price'     => $price ? round(($price->price_penny / 100) * (1 + $vatRate), 2) : null,
+            'was_price' => ($price && $price->was_price_penny) ? round(($price->was_price_penny / 100) * (1 + $vatRate), 2) : null,
+            'images'    => $variant->images->sortBy('sort_order')->map(fn($img) => [
+                'url' => $img->image_url,
+                'alt' => $img->alt_text ?? $variant->title,
+            ])->values()->toArray(),
+        ]);
+    }
 
     public function category(Request $request, string $slug)
     {

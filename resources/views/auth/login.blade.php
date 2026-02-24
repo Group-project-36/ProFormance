@@ -53,6 +53,7 @@
                 <a href="{{ route('register') }}" class="footer-link">
                     Create an account
                 </a>
+                <a href="{{ route('password.forgot') }}" class="forgot-link">Forgot Password?</a>
             </div>
         </form>
     </div>

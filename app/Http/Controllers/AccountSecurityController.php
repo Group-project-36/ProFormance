@@ -14,9 +14,6 @@ class AccountSecurityController extends Controller
         return view('account.security', compact('user'));
     }
 
-    /**
-     * Change password using the existing SHA256 + salt system.
-     */
     public function changePassword(Request $request)
     {
         $request->validate([
@@ -49,9 +46,6 @@ class AccountSecurityController extends Controller
             ->with('success', 'Password changed successfully.');
     }
 
-    /**
-     * Change email address (requires password confirmation).
-     */
     public function changeEmail(Request $request)
     {
         $request->validate([
@@ -86,9 +80,6 @@ class AccountSecurityController extends Controller
             ->with('success', 'Email updated successfully.');
     }
 
-    /**
-     * Deactivate account (soft delete — preserves order history).
-     */
     public function deleteAccount(Request $request)
     {
         $request->validate([

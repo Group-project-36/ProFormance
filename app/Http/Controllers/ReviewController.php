@@ -8,9 +8,6 @@ use App\Models\Review;
 
 class ReviewController extends Controller
 {
-    /**
-     * Store a new review for a product.
-     */
     public function store(Request $request, $productId)
     {
         if (!Auth::check()) {

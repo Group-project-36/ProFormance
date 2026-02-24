@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\LoginDetail;
 
@@ -14,102 +16,135 @@ class RegisterController extends Controller
     {
         return view('auth.register');
     }
+
     public function register(Request $request)
     {
-        \Log::info('Registration attempt started', ['email' => $request->email]);
-        
         $validator = Validator::make($request->all(), [
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:login_details,email_address'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'phone_number' => ['nullable', 'string', 'regex:/^[0-9]{10,15}$/'],
+            'first_name'          => ['required', 'string', 'max:100'],
+            'last_name'           => ['required', 'string', 'max:100'],
+            'company_name'        => ['nullable', 'string', 'max:255'],
+            'country_phone_code'  => ['required', 'integer'],
+            'phone_number'        => ['required', 'string', 'regex:/^[0-9]{10,15}$/'],
+            'email'               => ['required', 'string', 'email', 'max:255', 'unique:login_details,email_address'],
+            'password'            => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[A-Z]/',      // at least one uppercase
+                'regex:/[a-z]/',      // at least one lowercase
+                'regex:/[0-9]/',      // at least one number
+                'regex:/[@$!%*?&#]/', // at least one special character
+            ],
+            'terms' => ['accepted'],
         ], [
-            'email.unique' => 'This email is already registered.',
-            'email.email' => 'Please enter a valid email address.',
-            'phone_number.regex' => 'Phone number must be 10-15 digits.',
+            'terms.accepted'       => 'You must accept the Terms & Conditions.',
+            'email.unique'         => 'This email is already registered.',
+            'phone_number.regex'   => 'Phone number must be 10-15 digits.',
+            'email.email'          => 'Please enter a valid email address.',
+            'password.min'         => 'Password must be at least 8 characters.',
+            'password.regex'       => 'Password must include uppercase, lowercase, number, and special character.',
         ]);
 
         if ($validator->fails()) {
-            \Log::warning('Registration validation failed', ['errors' => $validator->errors()->all()]);
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
-        \Log::info('Validation passed, starting transaction');
-        
+        $breachCount = $this->checkPasswordBreach($request->password);
+
+        if ($breachCount > 0) {
+            return redirect()->back()
+                ->withErrors([
+                    'password' => "This password has appeared in {$breachCount} data breach(es). Please choose a different password for your security."
+                ])
+                ->withInput()
+                ->with('breach_warning', true);
+        }
+
         \DB::beginTransaction();
 
         try {
-            $phoneNumber = $request->phone_number ? (int) preg_replace('/[^0-9]/', '', $request->phone_number) : 0;
-            
-            $userData = [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'company_name' => $request->company_name ?? null,
-                'country_phone_code' => $request->country_phone_code ?? 44,
-                'phone_number' => $phoneNumber,
-                'user_role' => 'customer',
-                'is_active' => 1,
-                'email_verified' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-            
-            \Log::info('Creating user with data:', $userData);
-            
-            $userId = \DB::table('users')->insertGetId($userData);
-            
-            \Log::info('User created with ID: ' . $userId);
-            
-            if (!$userId) {
-                throw new \Exception('Failed to get user ID after insertion');
-            }
+            $user = User::create([
+                'first_name'          => $request->first_name,
+                'last_name'           => $request->last_name,
+                'company_name'        => $request->company_name,
+                'country_phone_code'  => $request->country_phone_code,
+                'phone_number'        => $request->phone_number,
+                'user_role'           => 'customer',
+                'is_active'           => true,
+                'email_verified'      => false,
+            ]);
+
             $salt = bin2hex(random_bytes(16));
-            
             $passwordHash = hash('sha256', $request->password . $salt);
-            
-            \Log::info('Password hashed', ['salt' => $salt, 'hash' => substr($passwordHash, 0, 20) . '...']);
-            $loginData = [
-                'user_id' => $userId,
+
+            LoginDetail::create([
+                'user_id'       => $user->user_id,
                 'email_address' => $request->email,
                 'password_hash' => $passwordHash,
                 'password_salt' => $salt,
-            ];
-            
-            \Log::info('Creating login details:', ['email' => $request->email, 'user_id' => $userId]);
-            
-            \DB::table('login_details')->insert($loginData);
-            
-            \Log::info('Login details created successfully');
+            ]);
 
             \DB::commit();
-            
-            \Log::info('Transaction committed successfully');
-
-            $user = User::find($userId);
-            
-            if (!$user) {
-                throw new \Exception('Could not find user after creation');
-            }
             Auth::login($user);
-            
-            \Log::info('User logged in successfully', ['user_id' => $userId, 'email' => $request->email]);
 
             return redirect('/')
-                ->with('success', 'Welcome to ProFitness! Your account has been created.');
+                ->with('success', 'Welcome to ProFormance! Your account has been created successfully.');
 
         } catch (\Exception $e) {
             \DB::rollBack();
-            
-            \Log::error('Registration failed: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->except('password', 'password_confirmation')
-            ]);
+
             return redirect()->back()
-                ->with('error', 'Registration Error: ' . $e->getMessage())
+                ->with('error', 'Registration failed. Please try again.')
                 ->withInput();
+        }
+    }
+
+    public function checkBreach(Request $request)
+    {
+        $request->validate(['password' => 'required|string']);
+
+        $count = $this->checkPasswordBreach($request->password);
+
+        return response()->json([
+            'breached' => $count > 0,
+            'count'    => $count,
+        ]);
+    }
+
+    private function checkPasswordBreach(string $password): int
+    {
+        try {
+            $sha1   = strtoupper(sha1($password));
+            $prefix = substr($sha1, 0, 5);
+            $suffix = substr($sha1, 5);
+
+            $response = Http::timeout(10)
+                ->withoutVerifying()
+                ->withHeaders([
+                    'Add-Padding' => 'true',
+                    'User-Agent'  => 'ProFormance-Laravel-App',
+                ])
+                ->get("https://api.pwnedpasswords.com/range/{$prefix}");
+
+            if (!$response->ok()) {
+                return 0;
+            }
+
+            foreach (explode("\n", $response->body()) as $line) {
+                [$hashSuffix, $count] = explode(':', trim($line));
+                if (strtoupper($hashSuffix) === $suffix) {
+                    return (int) $count;
+                }
+            }
+
+            return 0;
+
+        } catch (\Exception $e) {
+            // If HIBP is unreachable, don't block registration
+            return 0;
         }
     }
 }

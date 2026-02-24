@@ -78,15 +78,15 @@
         <div class="kb-footer-col">
             <h4 class="kb-footer-heading">Help</h4>
             <ul class="kb-footer-links">
-                <li><a href="#">Shipping &amp; delivery</a></li>
-                <li><a href="#">Returns &amp; refunds</a></li>
-                <li><a href="#">Size guide</a></li>
-                <li><a href="#">Contact us</a></li>
-                <li><a href="#">FAQ</a></li>
-                <li><a href="#">Gift cards</a></li>
-                <li><a href="#">Student discount</a></li>
-                <li><a href="#">Teacher discount</a></li>
-                <li><a href="#">First responder discount</a></li>
+                <li><a href="{{ route('help.shipping') }}">Shipping &amp; delivery</a></li>
+                <li><a href="{{ route('help.returns') }}">Returns &amp; refunds</a></li>
+                <li><a href="{{ route('help.size_guide') }}">Size guide</a></li>
+                <li><a href="{{ route('contact') }}">Contact us</a></li>
+                <li><a href="{{ route('help.faq') }}">FAQ</a></li>
+                <li><a href="{{ route('help.gift_cards') }}">Gift cards</a></li>
+                <li><a href="{{ route('help.student_discount') }}">Student discount</a></li>
+                <li><a href="{{ route('help.teacher_discount') }}">Teacher discount</a></li>
+                <li><a href="{{ route('help.first_responder_discount') }}">First responder discount</a></li>
             </ul>
         </div>
 
@@ -94,9 +94,9 @@
             <h4 class="kb-footer-heading">About</h4>
             <ul class="kb-footer-links">
                 <li><a href="{{ route('about') }}" class="kb-nav-link">About us</a></li>
-                <li><a href="#">Sustainability</a></li>
-                <li><a href="#">Careers</a></li>
-                <li><a href="#">Affiliates</a></li>
+                <li><a href="{{ route('about.sustainability') }}">Sustainability</a></li>
+                <li><a href="{{ route('about.careers') }}">Careers</a></li>
+                <li><a href="{{ route('about.affiliates') }}">Affiliates</a></li>
             </ul>
         </div>
     </div>
@@ -107,13 +107,13 @@
         </p>
 
         <div class="kb-footer-bottom-links">
-            <a href="#">Privacy policy</a>
+            <a href="{{ route('legal.privacy') }}">Privacy policy</a>
             <span class="kb-footer-separator">•</span>
-            <a href="#">GDPR &amp; data protection</a>
+            <a href="{{ route('legal.gdpr') }}">GDPR &amp; data protection</a>
             <span class="kb-footer-separator">•</span>
-            <a href="#">Terms &amp; conditions</a>
+            <a href="{{ route('legal.terms') }}">Terms &amp; conditions</a>
             <span class="kb-footer-separator">•</span>
-            <a href="#">Cookies</a>
+            <a href="{{ route('legal.cookies') }}">Cookies</a>
         </div>
     </div>
 

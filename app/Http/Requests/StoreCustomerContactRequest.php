@@ -16,8 +16,6 @@ class StoreCustomerContactRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // If a variant was selected but product_id wasn't set (or got cleared),
-        // fill product_id from the variant.
         if ($this->filled('variant_id') && !$this->filled('product_id')) {
             $productId = ProductVariant::where('variant_id', $this->input('variant_id'))
                 ->value('product_id');
@@ -45,11 +43,7 @@ class StoreCustomerContactRequest extends FormRequest
             ],
 
             'message_description' => ['required', 'string'],
-
-            // Free text the user typed (optional)
             'product_search'      => ['nullable', 'string', 'max:225'],
-
-            // IDs from autocomplete selection (optional)
             'product_id'          => ['nullable', 'integer', 'exists:products,product_id'],
             'variant_id'          => ['nullable', 'integer', 'exists:product_variants,variant_id'],
 

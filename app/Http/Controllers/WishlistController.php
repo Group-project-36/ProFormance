@@ -11,9 +11,7 @@ use App\Models\Address;
 
 class WishlistController extends Controller
 {
-    /**
-     * Show all user wishlists (overview).
-     */
+
     public function index()
     {
         if (!Auth::check()) {
@@ -31,9 +29,6 @@ class WishlistController extends Controller
         return view('wishlist.index', compact('wishlists'));
     }
 
-    /**
-     * Show a single wishlist's items.
-     */
     public function show($wishlistId)
     {
         if (!Auth::check()) {
@@ -56,9 +51,6 @@ class WishlistController extends Controller
         return view('wishlist.show', compact('wishlist', 'items', 'addresses', 'shareUrl'));
     }
 
-    /**
-     * Create a new wishlist.
-     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -80,9 +72,6 @@ class WishlistController extends Controller
         return back()->with('success', 'Wishlist created!');
     }
 
-    /**
-     * Update wishlist settings (name, slug, public, delivery address).
-     */
     public function update(Request $request, $wishlistId)
     {
         $wishlist = Wishlist::where('user_id', Auth::user()->user_id)
@@ -96,10 +85,8 @@ class WishlistController extends Controller
             'delivery_address_id' => 'nullable|integer|exists:addresses,address_id',
         ]);
 
-        // Handle slug
         $newSlug = $data['slug'] ?? null;
         if ($newSlug && $newSlug !== $wishlist->slug) {
-            // Sanitise and ensure unique
             $newSlug = Str::slug($newSlug);
             if (empty($newSlug)) {
                 $newSlug = Wishlist::generateUniqueSlug($data['wishlist_name'], $wishlist->wishlist_id);
@@ -112,7 +99,6 @@ class WishlistController extends Controller
             $newSlug = $wishlist->slug;
         }
 
-        // Validate delivery address belongs to this user
         if (!empty($data['delivery_address_id'])) {
             $addressBelongsToUser = Address::where('address_id', $data['delivery_address_id'])
                 ->where('user_id', Auth::user()->user_id)
@@ -133,32 +119,26 @@ class WishlistController extends Controller
         return back()->with('success', 'Wishlist updated!');
     }
 
-    /**
-     * Delete a wishlist.
-     */
+
     public function destroy($wishlistId)
     {
         $wishlist = Wishlist::where('user_id', Auth::user()->user_id)
             ->where('wishlist_id', $wishlistId)
             ->firstOrFail();
 
-        // Delete items first
         WishlistItem::where('wishlists_id', $wishlist->wishlist_id)->delete();
         $wishlist->delete();
 
         return redirect()->route('wishlist.index')->with('success', 'Wishlist deleted.');
     }
 
-    /**
-     * Toggle share (public/private).
-     */
+
     public function toggleShare($wishlistId)
     {
         $wishlist = Wishlist::where('user_id', Auth::user()->user_id)
             ->where('wishlist_id', $wishlistId)
             ->firstOrFail();
 
-        // Generate slug if going public and has none
         if (!$wishlist->is_public && !$wishlist->slug) {
             $wishlist->slug = Wishlist::generateUniqueSlug($wishlist->wishlist_name, $wishlist->wishlist_id);
         }
@@ -173,9 +153,6 @@ class WishlistController extends Controller
         );
     }
 
-    /**
-     * Toggle a variant in/out of a wishlist (AJAX).
-     */
     public function toggle(Request $request)
     {
         if (!Auth::check()) {
@@ -191,7 +168,6 @@ class WishlistController extends Controller
             'wishlist_id' => 'nullable|integer',
         ]);
 
-        // Use specified wishlist or default
         $wishlist = $this->resolveWishlist($request->wishlist_id);
 
         $existing = WishlistItem::where('wishlists_id', $wishlist->wishlist_id)
@@ -225,9 +201,6 @@ class WishlistController extends Controller
         return back()->with('success', $message);
     }
 
-    /**
-     * Remove item from a specific wishlist.
-     */
     public function remove(Request $request)
     {
         if (!Auth::check()) {
@@ -250,9 +223,7 @@ class WishlistController extends Controller
         return back()->with('success', 'Removed from wishlist');
     }
 
-    /**
-     * Show shared wishlist by slug (public page).
-     */
+
     public function shared($slug)
     {
         $wishlist = Wishlist::where('slug', $slug)
@@ -266,16 +237,11 @@ class WishlistController extends Controller
 
         $owner = $wishlist->user;
 
-        // Check if wishlist has a delivery address set (for gift purchasing)
         $canGift = $wishlist->delivery_address_id !== null;
 
         return view('wishlist.shared', compact('wishlist', 'items', 'owner', 'canGift'));
     }
 
-    /**
-     * Add item to cart as a gift (from shared wishlist).
-     * Sets session data so checkout knows to ship to wishlist owner.
-     */
     public function giftAddToCart(Request $request)
     {
         $request->validate([
@@ -293,7 +259,6 @@ class WishlistController extends Controller
             return back()->withErrors(['gift' => 'The wishlist owner has not set a delivery address.']);
         }
 
-        // Store gift info in session so checkout can use it
         $giftData = session('gift_orders', []);
         $giftData[$request->variant_id] = [
             'wishlist_id'         => $wishlist->wishlist_id,
@@ -311,8 +276,6 @@ class WishlistController extends Controller
         ];
         session(['gift_orders' => $giftData]);
 
-        // Add to cart (use existing cart logic)
-        // Add to cart manually (same logic as CartController@add)
         app(\App\Http\Controllers\CartController::class)->add(
             new \Illuminate\Http\Request([
                 'variant_id' => $request->variant_id,
@@ -324,9 +287,7 @@ class WishlistController extends Controller
             ->with('success', 'Gift item added to basket! It will be delivered to ' . $wishlist->user->first_name . '.');
     }
 
-    /**
-     * Get or create the user's default wishlist.
-     */
+
     private function resolveWishlist(?int $wishlistId = null): Wishlist
     {
         $user = Auth::user();
@@ -339,7 +300,6 @@ class WishlistController extends Controller
             if ($wishlist) return $wishlist;
         }
 
-        // Get or create default
         $wishlist = Wishlist::where('user_id', $user->user_id)
             ->orderBy('created_at')
             ->first();

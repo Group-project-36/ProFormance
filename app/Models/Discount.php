@@ -11,7 +11,7 @@ class Discount extends Model
 
     protected $fillable = [
         'discount_code',
-        'discoun_type',       // Note: matches your DB column (typo in schema)
+        'discoun_type',
         'discount_value',
         'starts_at',
         'ends_at',
@@ -28,9 +28,6 @@ class Discount extends Model
         'ends_at'            => 'datetime',
     ];
 
-    /**
-     * Check if this discount code is currently valid.
-     */
     public function isValid(int $subtotalPenny, int $userId): bool|string
     {
         if (!$this->is_active) {
@@ -50,7 +47,6 @@ class Discount extends Model
             return "Minimum order of £{$min} required for this code.";
         }
 
-        // Check global usage limit
         if ($this->usage_limit !== null) {
             $totalUses = DiscountRedemption::where('discount_id', $this->discount_id)->count();
             if ($totalUses >= $this->usage_limit) {
@@ -58,7 +54,6 @@ class Discount extends Model
             }
         }
 
-        // Check per-user limit
         if ($this->per_user_limit !== null) {
             $userUses = DiscountRedemption::where('discount_id', $this->discount_id)
                 ->where('user_id', $userId)
@@ -71,16 +66,13 @@ class Discount extends Model
         return true;
     }
 
-    /**
-     * Calculate discount amount in pennies.
-     */
+
     public function calculatePenny(int $subtotalPenny): int
     {
         if ($this->discoun_type === 'percentage') {
             return (int) round($subtotalPenny * ($this->discount_value / 100));
         }
 
-        // fixed_amount — value is in pounds, convert to pennies
         if ($this->discoun_type === 'fixed_amount') {
             return (int) round($this->discount_value * 100);
         }

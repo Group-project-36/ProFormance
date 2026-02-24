@@ -493,50 +493,5 @@
 @endsection
 
 @section('scripts')
-<script>
-    function toggleManualAddress(radio) {
-        const fields = document.getElementById('manual-address-fields');
-        if (radio.value === '') {
-            fields.style.display = 'block';
-        } else {
-            fields.style.display = 'none';
-        }
-    }
 
-    function toggleBilling() {
-        const checkbox = document.getElementById('billing-same-checkbox');
-        const fields = document.getElementById('billing-fields');
-        fields.style.display = checkbox.checked ? 'none' : 'block';
-    }
-
-    function togglePayPal() {
-        const selected = document.querySelector('input[name="payment_method"]:checked').value;
-        const cardFields = document.getElementById('card-fields');
-        const paypalNotice = document.getElementById('paypal-notice');
-
-        if (selected === 'paypal') {
-            cardFields.style.display = 'none';
-            paypalNotice.style.display = 'flex';
-        } else {
-            cardFields.style.display = 'block';
-            paypalNotice.style.display = 'none';
-        }
-    }
-
-    // Card number auto-spacing
-    document.querySelector('input[name="card_number"]')?.addEventListener('input', function(e) {
-        let val = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
-        e.target.value = formatted;
-    });
-
-    // Expiry date auto-slash
-    document.querySelector('input[name="card_expiry"]')?.addEventListener('input', function(e) {
-        let val = e.target.value.replace(/\//g, '').replace(/[^0-9]/g, '');
-        if (val.length >= 2) {
-            val = val.substring(0, 2) + '/' + val.substring(2);
-        }
-        e.target.value = val;
-    });
-</script>
 @endsection

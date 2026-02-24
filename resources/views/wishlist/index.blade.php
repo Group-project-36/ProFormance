@@ -1,7 +1,6 @@
-@extends('layouts.app')
 
-@section('content')
-
+@extends('account.layout')
+@section('account-content')
 <div class="kb-wishlist-page">
     <div class="kb-wishlist-container">
 

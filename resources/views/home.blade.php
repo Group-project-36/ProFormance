@@ -226,16 +226,20 @@
                             </div>
                             <div class="kb-new-card-actions">
                                 @if($variant)
-                                    <form method="POST" action="{{ route('cart.add') }}">
-                                        @csrf
-                                        <input type="hidden" name="variant_id" value="{{ $variant->variant_id }}">
-                                        <input type="number" name="quantity" value="1" min="1" style="width:60px;">
-                                        <button type="submit">Add to Basket</button>
-                                    </form>
-                                @else
-                                    <button type="button" class="kb-add-to-cart-btn" disabled title="No variant available">
+                                <div class="cart-control"
+                                    data-variant="{{ $variant->variant_id }}"
+                                    data-cart-url="{{ route('cart.add') }}">
+
+                                    <button type="button" class="add-btn kb-product-page-add-btn">
                                         Add to Basket
                                     </button>
+
+                                    <div class="qty-controls" hidden>
+                                        <button type="button" class="minus-btn">🗑</button>
+                                        <span class="qty">1</span>
+                                        <button type="button" class="plus-btn">+</button>
+                                    </div>
+                                </div>
                                 @endif
 
                                 @if($variant)
@@ -432,4 +436,36 @@
             </div>
         </div>
     </section>
+
+<script>
+function toggleWishlistCard(btn) {
+    const variantId = btn.dataset.variantId;
+    const icon = btn.querySelector('i');
+
+    fetch('{{ route("wishlist.toggle") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ variant_id: variantId }),
+    })
+    .then(res => {
+        if (res.status === 401) { window.location.href = '{{ route("login") }}'; return; }
+        return res.json();
+    })
+    .then(data => {
+        if (!data) return;
+        if (data.in_wishlist) {
+            btn.classList.add('kb-wishlisted');
+            icon.className = 'bi bi-heart-fill';
+        } else {
+            btn.classList.remove('kb-wishlisted');
+            icon.className = 'bi bi-heart';
+        }
+    })
+    .catch(err => console.error('Wishlist error:', err));
+}
+</script>
 @endsection

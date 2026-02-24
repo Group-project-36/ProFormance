@@ -22,7 +22,6 @@ class CartController extends Controller
         $variantIds = array_values(array_unique(array_column($cart, 'variant_id')));
         if (empty($variantIds)) return $cart;
 
-        // Pull prices + currency symbol in one go
         $rows = DB::table('variant_currency_prices as vcp')
             ->join('currencies as c', 'c.currency_code', '=', 'vcp.currency_code')
             ->whereIn('vcp.variant_id', $variantIds)
@@ -37,19 +36,15 @@ class CartController extends Controller
             $line['currency'] = $currency;
             $line['symbol'] = $row->symbol ?? '£';
 
-            // Convert pennies → decimal
             $netPrice = $row ? ($row->price_penny / 100) : 0;
             $netWas   = ($row && $row->was_price_penny) ? ($row->was_price_penny / 100) : null;
 
-            // Store both (useful later for invoices etc)
             $line['price_ex_vat'] = $netPrice;
             $line['was_ex_vat']   = $netWas;
 
-            // Display price (GBP shows incl VAT)
             $line['price'] = $this->applyVatToDecimal($netPrice, $vatRate);
             $line['was']   = $netWas !== null ? $this->applyVatToDecimal($netWas, $vatRate) : null;
 
-            // Optional: label for UI
             $line['vat_label'] = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
         }
         unset($line);
@@ -115,7 +110,7 @@ class CartController extends Controller
     {
         $validated = $request->validate([
             'variant_id' => 'required|integer',
-            'quantity'   => 'nullable|integer|min:1',
+            'quantity'   => 'nullable|integer|min:0',
         ]);
 
         $variantId = $validated['variant_id'];
@@ -130,8 +125,12 @@ class CartController extends Controller
             ->first();
 
         if (! $variantRow) {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'message' => 'Product not found.'], 404);
+            }
             return back()->with('error', 'Product not found.');
         }
+
         $priceRow = VariantCurrencyPrice::where('variant_id', $variantId)
             ->where('currency_code', $this->currency())
             ->first();
@@ -140,10 +139,57 @@ class CartController extends Controller
 
         $cart = $this->getCart();
 
+        if ($request->expectsJson()) {
+            $foundIndex = null;
+
+            foreach ($cart as $idx => $line) {
+                if ($line['variant_id'] == $variantId) {
+                    $foundIndex = $idx;
+                    break;
+                }
+            }
+
+            if ($quantity <= 0) {
+                if ($foundIndex !== null) {
+                    unset($cart[$foundIndex]);
+                    $cart = array_values($cart);
+                }
+            } else {
+                if ($foundIndex !== null) {
+                    $cart[$foundIndex]['quantity'] = $quantity;
+                } else {
+                    $existingIds = array_column($cart, 'id');
+                    $newId = empty($existingIds) ? 1 : (max($existingIds) + 1);
+
+                    $cart[] = [
+                        'id'         => $newId,
+                        'variant_id' => $variantRow->variant_id,
+                        'product_id' => $variantRow->product_id,
+                        'name'       => $variantRow->product_name,
+                        'image'      => $variantRow->image_url ? ('images/' . $variantRow->image_url) : null,
+                        'price'      => $price,
+                        'quantity'   => $quantity,
+                        'currency'   => $this->currency(),
+                    ];
+                }
+            }
+
+            $this->saveCart($cart);
+
+            $cart = $this->repriceCart($cart);
+            [$total, $totalItems] = $this->computeTotals($cart);
+
+            return response()->json([
+                'ok' => true,
+                'total' => (float)$total,
+                'totalItems' => (int)$totalItems,
+            ]);
+        }
+
         $merged = false;
         foreach ($cart as &$line) {
             if ($line['variant_id'] == $variantId) {
-                $line['quantity'] += $quantity;
+                $line['quantity'] += max(1, $quantity);
                 $merged = true;
                 break;
             }
@@ -159,16 +205,20 @@ class CartController extends Controller
                 'variant_id' => $variantRow->variant_id,
                 'product_id' => $variantRow->product_id,
                 'name'       => $variantRow->product_name,
-                'image'      => $variantRow->image_url ? ('images/' . $variantRow->image_url) : null,
+                'image'      => $variantRow->image_url ? ('images/' . $variantRow->variant_id) : null,
                 'price'      => $price,
-                'quantity'   => $quantity,
+                'quantity'   => max(1, $quantity),
                 'currency'   => $this->currency(),
             ];
         }
 
         $this->saveCart($cart);
 
-        return redirect()->route('cart.index');
+        return response()->json([
+            'ok' => true,
+            'totalItems' => (int)$totalItems,
+            'total' => (float)$total,
+        ]);
     }
 
     public function update(Request $request, int $lineId)
@@ -241,11 +291,11 @@ class CartController extends Controller
         $cart = $this->repriceCart($cart);
         [$total, $totalItems] = $this->computeTotals($cart);
 
-        // Only send what the mini preview needs
         $lines = array_map(function ($line) {
             return [
                 'id'       => $line['id'],
                 'name'     => $line['name'] ?? '',
+                'variant_id' => $line['variant_id'],
                 'image'    => $line['image'] ?? null,
                 'price'    => (float)($line['price'] ?? 0),
                 'quantity' => (int)($line['quantity'] ?? 0),

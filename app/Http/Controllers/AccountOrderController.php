@@ -9,9 +9,7 @@ use App\Models\Address;
 
 class AccountOrderController extends Controller
 {
-    /**
-     * List all orders for the authenticated user.
-     */
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -29,9 +27,6 @@ class AccountOrderController extends Controller
         return view('account.orders', compact('orders'));
     }
 
-    /**
-     * Show a single order's details with its items.
-     */
     public function show($orderId)
     {
         $user = Auth::user();

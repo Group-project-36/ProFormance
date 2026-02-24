@@ -1,19 +1,19 @@
 /**
- * LOGIC ENGINE (Toast): Manages the lifecycle of top-screen alerts. 
- * This script dynamically creates toast elements, injects content, 
- * and assigns state classes (success/error/info). It handles the timing 
- * sequence, triggering exit animations and removing elements from the 
- * DOM after a set duration.
+ * notifications.js
+ *
+ * Global toast (top of screen) and notification (bottom of screen) system.
+ * Loaded early — other scripts depend on Toast.show() and Notification.show().
  */
+
 const Toast = {
-    show: function(message, type = 'info') {
+    show(message, type = 'info') {
         const existing = document.querySelector('.kb-toast');
         if (existing) existing.remove();
-        
+
         const toast = document.createElement('div');
         toast.className = `kb-toast kb-toast-${type}`;
         toast.textContent = message;
-        
+
         document.body.appendChild(toast);
         setTimeout(() => {
             toast.classList.add('kb-exit');
@@ -22,20 +22,14 @@ const Toast = {
     }
 };
 
-/**
- * LOGIC ENGINE (Notification): Manages the lifecycle of bottom-screen alerts. 
- * Specifically designed for action feedback, it creates elements with icons
- * and handles the timing sequence to ensure the UI remains uncluttered 
- * by automatically removing notifications after use.
- */
 const Notification = {
-    show: function(message, type = 'success') {
+    show(message, type = 'success') {
         const existing = document.querySelector('.kb-cart-notification');
         if (existing) existing.remove();
-        
+
         const notification = document.createElement('div');
         notification.className = `kb-cart-notification ${type}`;
-        
+
         const icon = type === 'success' ? '✓' : '!';
         notification.innerHTML = `
             <div class="notification-content">
@@ -43,9 +37,8 @@ const Notification = {
                 <span>${message}</span>
             </div>
         `;
-        
+
         document.body.appendChild(notification);
-        
         setTimeout(() => {
             notification.classList.add('kb-exit');
             setTimeout(() => notification.remove(), 300);

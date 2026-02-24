@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class WishlistItem extends Model
 {
     protected $table = 'wishlist_items';
-    public $incrementing = false;
-    public $timestamps = false;
 
-    // Only has created_at, no updated_at
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+
+    public $timestamps = false;
     const UPDATED_AT = null;
 
     protected $fillable = [

@@ -21,7 +21,6 @@ class SidebarAllComposer
         ->orderBy('sort_order')
         ->get();
 
-        // Add a total count for parents = own + children
         $mainCategories->each(function ($cat) {
             $cat->products_total = (int) $cat->products_count
                 + (int) $cat->children->sum('products_count');

@@ -1,23 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="{{ asset('js/utils/colourFlash.js') }}"></script>
-    <script src="{{ asset('js/utils/colourMode.js') }}"></script>
-    <script src="{{ asset('js/utils/notifications.js') }}"></script>
-    <script src="{{ asset('js/utils/updatetax.js') }}"></script>
-    <script src="{{ asset('js/utils/cardValidity.js') }}"></script>
+    <script sac="{{ asset('js/theme.js') }}"></script>
+    <script src="{{ asset('js/carousel.js') }}"></script>
+    <script src="{{ asset('js/wishlist.js') }}"></script>
+    <script src="{{ asset('js/wishlist.js') }}"></script>
+    <script src="{{ asset('js/checkout.js') }}"></script>
+    <script src="{{ asset('js/card-validation.js') }}"></script>
+    <script src="{{ asset('js/password-security.js') }}"></script>
+    <script>
+        const breachCheckUrl = '{{ route("password.checkBreach") }}';
+        const csrfToken = '{{ csrf_token() }}';
+    </script>
+    <script src="{{ asset('js/password-security.js') }}"></script>
+    <script src="{{ asset('js/product-search.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'ProFormance' }}</title>
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    {{-- <link rel="stylesheet" href="{{ asset('css/phone.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/phone.css') }}">
     <link rel="stylesheet" href="{{ asset('css/contact.css') }}">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}">
     <link rel="stylesheet" href="{{ asset('css/checkout.css') }}">
     <link rel="stylesheet" href="{{ asset('css/notification.css') }}">
     <link rel="stylesheet" href="{{ asset('css/wishlist-reviews.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/wishlist-v2-additions.css') }}"> --}}
+    <link rel="stylesheet" href="{{ asset('css/wishlist-v2-additions.css') }}">
     
     
 
@@ -30,7 +39,6 @@
 </head>
 
 <body class="kb-body">
-    @include('layouts.partials.dropdown-script')
 
     @include('layouts.partials.header')
     @if (session('success'))
@@ -44,9 +52,14 @@
     <main>
         @yield('content')
     </main>
-
+    @include('layouts.partials.cookie')
     @include('layouts.partials.footer')
     @include('layouts.partials.svg-sprite')
     @yield('scripts')
+
+    <script src="{{ asset('js/notifications.js') }}"></script>
+    <script src="{{ asset('js/navigation.js') }}"></script>
+    <script src="{{ asset('js/cart.js') }}"></script>
+    <script src="{{ asset('js/cookie-banner.js') }}"></script>
 </body>
 </html>

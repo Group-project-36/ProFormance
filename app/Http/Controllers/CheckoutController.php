@@ -35,11 +35,6 @@ class CheckoutController extends Controller
     {
         return session('cart', []);
     }
-
-    /**
-     * Penny-safe subtotal from cart.
-     * Prefers line['price_penny'] if present; falls back to line['price'] * 100.
-     */
     private function cartSubtotalPenny(array $cart): int
     {
         $subtotal = 0;
@@ -57,12 +52,6 @@ class CheckoutController extends Controller
         return $subtotal;
     }
 
-    /**
-     * Simple VAT:
-     * - GB => 20%
-     * - non-GB => 0% (export)
-     * - tax_exempt override => 0%
-     */
     private function vatRateFor(string $countryCode, ?TaxProfile $taxProfile): float
     {
         $countryCode = strtoupper(trim($countryCode));
@@ -75,9 +64,7 @@ class CheckoutController extends Controller
         return $rate;
     }
 
-    /**
-     * Show the checkout page.
-     */
+
     public function show(Request $request)
     {
         if (!Auth::check()) {
@@ -112,13 +99,8 @@ class CheckoutController extends Controller
         $addresses = Address::where('user_id', $user->user_id)
             ->orderByDesc('is_default_shipping_address')
             ->get();
-
-        // Preview shipping country for VAT (default address or GB)
-        // Default shipping country (buyer default or GB)
         $defaultAddress = $addresses->first();
         $shipCountryCode = $defaultAddress?->country_code ?? 'GB';
-
-        // If cart contains a gift item, override ship country from gift address stored in session
         $giftOrders = session('gift_orders', []);
         $isGift = false;
         $giftShippingPreview = null;
@@ -131,12 +113,8 @@ class CheckoutController extends Controller
                 break;
             }
         }
-
-        // Compute pennies
         $subtotalPenny = $this->cartSubtotalPenny($cart);
         $totalItems = array_sum(array_map(fn ($l) => (int)($l['quantity'] ?? 0), $cart));
-
-        // Discount (pennies)
         $appliedDiscount = session('checkout_discount');
         $discountPenny = 0;
 
@@ -146,12 +124,9 @@ class CheckoutController extends Controller
                 $discountPenny = $discount->calculatePenny($subtotalPenny);
             }
         }
-
-        // VAT
         $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
         $vatRate = $this->vatRateFor($shipCountryCode, $taxProfile);
 
-        // Taxable base after discount
         $taxablePenny = max(0, $subtotalPenny - $discountPenny);
         $taxPenny = (int) round($taxablePenny * $vatRate);
         $shippingMethod = $data['shipping_method'] ?? 'standard';
@@ -165,11 +140,8 @@ class CheckoutController extends Controller
             'addresses'       => $addresses,
             'user'            => $user,
             'appliedDiscount' => $appliedDiscount,
-
             'isGift' => $isGift,
             'giftShippingPreview' => $giftShippingPreview,
-
-            // totals for display
             'subtotalPenny'   => $subtotalPenny,
             'discountPenny'   => $discountPenny,
             'taxPenny'        => $taxPenny,
@@ -177,15 +149,11 @@ class CheckoutController extends Controller
             'totalPenny'      => $totalPenny,
             'vatRate'         => $vatRate,
             'shipCountryCode' => $shipCountryCode,
-
             'totalItems'      => $totalItems,
             'symbol'          => $symbol,
         ]);
     }
 
-    /**
-     * Apply a discount code.
-     */
     public function applyDiscount(Request $request)
     {
         $request->validate([
@@ -274,9 +242,6 @@ class CheckoutController extends Controller
         return back()->with('success', 'Discount removed.');
     }
 
-    /**
-     * Place the order.
-     */
     public function store(Request $request)
     {
         if (!Auth::check()) {
@@ -285,10 +250,9 @@ class CheckoutController extends Controller
 
         $usingSavedAddress = $request->filled('address_id');
         $billingSame       = $request->has('billing_same');
-         $method = $request->input('payment_method', 'card'); // default to card
+         $method = $request->input('payment_method', 'card');
 
         $data = $request->validate([
-            // Shipping
             'address_id'            => 'nullable|integer',
             'ship_recipient_name'   => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:200',
             'ship_house_number'     => 'nullable|string|max:10',
@@ -300,7 +264,6 @@ class CheckoutController extends Controller
             'ship_country_code'     => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:2',
             'ship_phone_number'     => 'nullable|string|max:30',
 
-            // Billing
             'billing_same'          => 'sometimes|in:1',
             'bill_recipient_name'   => ($billingSame ? 'nullable' : 'required') . '|string|max:200',
             'bill_house_number'     => 'nullable|string|max:10',
@@ -312,7 +275,6 @@ class CheckoutController extends Controller
             'bill_country_code'     => ($billingSame ? 'nullable' : 'required') . '|string|max:2',
             'bill_phone_number'     => 'nullable|string|max:30',
 
-            // Payment
             'payment_method' => ['required', 'in:card,paypal'],
 
             'card_name'   => $method === 'paypal'
@@ -330,8 +292,6 @@ class CheckoutController extends Controller
             'card_cvv'    => $method === 'paypal'
                 ? ['nullable']
                 : ['required','string','max:4', new CardCvv($request->input('card_number'))],
-
-            // Notes
             'order_notes'      => 'nullable|string|max:1000',
             'shipping_method' => 'required|in:standard,next_day',
         ]);
@@ -345,7 +305,6 @@ class CheckoutController extends Controller
                 ->with('error', 'Your basket is empty.');
         }
         
-        // Detect gift shipping (from session + cart)
         $giftOrders = session('gift_orders', []);
         $cart = $this->getCart();
 
@@ -357,8 +316,6 @@ class CheckoutController extends Controller
                 break;
             }
         }
-
-        // ✅ Always define $shipping in one of these branches
         if ($giftShipping) {
             $shipping = [
                 'address_id'       => $giftShipping['address_id'] ?? null,
@@ -380,7 +337,6 @@ class CheckoutController extends Controller
     $shipCountryCode = strtoupper($shipping['country_code'] ?? 'GB');
         $shippingMethod = $data['shipping_method'] ?? 'standard';
 
-        // Resolve billing address
         if (!empty($data['billing_same'])) {
             $billing = $shipping;
         } else {
@@ -400,7 +356,6 @@ class CheckoutController extends Controller
         $selectedMethod = $request->input('payment_method');
 
         $data = $request->validate([
-            // ... your shipping/billing rules unchanged ...
 
             'payment_method' => ['required', 'string', Rule::in(['card','paypal'])],
 
@@ -423,10 +378,8 @@ class CheckoutController extends Controller
         ]);
 
 
-        // Subtotal + shipping
         $subtotalPenny = $this->cartSubtotalPenny($cart);
 
-        // Discount
         $discountPenny = 0;
         $appliedDiscount = session('checkout_discount');
         $discount = null;
@@ -441,7 +394,6 @@ class CheckoutController extends Controller
             }
         }
 
-        // VAT
         $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
         $vatRate = $this->vatRateFor($shipCountryCode, $taxProfile);
 
@@ -497,7 +449,6 @@ class CheckoutController extends Controller
                     ? (int)$line['price_penny']
                     : (int) round(((float)($line['price'] ?? 0)) * 100);
 
-                // Look up SKU
                 $sku = 'UNKNOWN';
                 if (!empty($line['variant_id'])) {
                     $variant = \App\Models\ProductVariant::find($line['variant_id']);
@@ -516,8 +467,16 @@ class CheckoutController extends Controller
                     'tax_rate'         => $vatRate, // 0.20 or 0.00
                 ]);
             }
+            
+             $variantId = $line['variant_id'] ?? null;
+                if ($variantId) {
+                    $inventory = \App\Models\Inventory::where('variant_id', $variantId)->first();
+                    if ($inventory) {
+                        $inventory->available_stock = max(0, $inventory->available_stock - $qty);
+                        $inventory->save();
+                    }
+                }
 
-            // Discount redemption
             if ($discount && $discountPenny > 0) {
                 DiscountRedemption::create([
                     'discount_id' => $discount->discount_id,
@@ -533,7 +492,6 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            // Simulated payment record
             $providerMap = [
                 'visa' => 3,
                 'mastercard' => 4,
@@ -559,7 +517,6 @@ class CheckoutController extends Controller
                 'updated_at'    => now(),
             ]);
 
-            // Clear cart and discount
             $request->session()->forget('cart');
             $request->session()->forget('checkout_discount');
             $request->session()->forget('gift_orders');
@@ -574,18 +531,13 @@ class CheckoutController extends Controller
         $countryCode = strtoupper(trim($countryCode));
         $shippingMethod = strtolower(trim($shippingMethod));
 
-        // Simple pricing (edit numbers to taste)
         if ($countryCode === 'GB') {
-            return $shippingMethod === 'next_day' ? 1299 : 799; // £7.99 or £4.99
+            return $shippingMethod === 'next_day' ? 1299 : 799;
         }
 
-        // International flat rate
-        return 1999; // £19.99
+        return 1999;
     }
 
-    /**
-     * Resolve shipping address from saved address or manual input.
-     */
     private function resolveShippingAddress(array $data, $user): array
     {
         if (!empty($data['address_id'])) {

@@ -15,6 +15,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\AccountInvoiceController;
+use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\CookieController;
+use App\Http\Controllers\PageController;
 
 
 use App\Http\Controllers\AccountController;
@@ -24,6 +27,10 @@ use App\Http\Controllers\AccountSecurityController;
 use App\Http\Controllers\AccountReviewController;
 
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\StockNotificationController;
+
+Route::get('/products/variant', [ProductController::class, 'getVariant'])->name('products.getVariant');
+Route::post('/stock/notify', [StockNotificationController::class, 'subscribe'])->name('stock.notify');
 
 
 Route::post('/currency', [PreferenceController::class, 'updateCurrency'])
@@ -61,7 +68,13 @@ Route::get('/brand/{brand}', function($brand) {
     return redirect()->route('products.index', ['brand' => $brand]);
 })->name('brand.show');
 
+// Forgot password
+Route::get('/forgot-password',  [ForgotPasswordController::class, 'showForgotForm'])->name('password.forgot');
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink'])->name('password.sendResetLink');
 
+// Reset password (from email link)
+Route::get('/reset-password/{token}',  [ForgotPasswordController::class, 'showResetForm'])->name('password.showReset');
+Route::post('/reset-password',         [ForgotPasswordController::class, 'resetPassword'])->name('password.reset');
 
 
 
@@ -160,6 +173,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/wishlist/remove',               [WishlistController::class, 'remove'])->name('wishlist.remove');
 });
 
+Route::post('/password/check-breach', [RegisterController::class, 'checkBreach'])
+    ->name('password.checkBreach');
+
+
 // Public shared wishlist (by slug — nice short URL)
 Route::get('/w/{slug}', [WishlistController::class, 'shared'])->name('wishlist.shared');
 
@@ -172,5 +189,34 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/test-cards', function () {
-    return view('test-cards');
+    return view('test-cards');   
 })->name('test.cards');
+
+Route::post('/accept-edu-notice', [CookieController::class, 'accept'])
+    ->name('edu.accept');
+
+    Route::prefix('help')->name('help.')->group(function () {
+    Route::get('/shipping-delivery', [PageController::class, 'shipping'])->name('shipping');
+    Route::get('/returns-refunds', [PageController::class, 'returns'])->name('returns');
+    Route::get('/size-guide', [PageController::class, 'sizeGuide'])->name('size_guide');
+    Route::get('/faq', [PageController::class, 'faq'])->name('faq');
+    Route::get('/gift-cards', [PageController::class, 'giftCards'])->name('gift_cards');
+
+    Route::get('/student-discount', [PageController::class, 'studentDiscount'])->name('student_discount');
+    Route::get('/teacher-discount', [PageController::class, 'teacherDiscount'])->name('teacher_discount');
+    Route::get('/first-responder-discount', [PageController::class, 'firstResponderDiscount'])->name('first_responder_discount');
+});
+
+Route::prefix('about')->name('about.')->group(function () {
+    Route::get('/sustainability', [PageController::class, 'sustainability'])->name('sustainability');
+    Route::get('/careers', [PageController::class, 'careers'])->name('careers');
+    Route::get('/affiliates', [PageController::class, 'affiliates'])->name('affiliates');
+});
+
+// Legal
+Route::prefix('legal')->name('legal.')->group(function () {
+    Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('privacy');
+    Route::get('/gdpr-data-protection', [PageController::class, 'gdpr'])->name('gdpr');
+    Route::get('/terms-conditions', [PageController::class, 'terms'])->name('terms');
+    Route::get('/cookies', [PageController::class, 'cookies'])->name('cookies');
+});

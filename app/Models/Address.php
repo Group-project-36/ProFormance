@@ -35,9 +35,7 @@ class Address extends Model
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    /**
-     * Format the address as a readable string.
-     */
+
     public function getFormattedAttribute(): string
     {
         return collect([

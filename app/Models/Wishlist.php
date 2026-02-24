@@ -37,9 +37,6 @@ class Wishlist extends Model
         return $this->belongsTo(Address::class, 'delivery_address_id', 'address_id');
     }
 
-    /**
-     * Generate a unique slug from the given text.
-     */
     public static function generateUniqueSlug(string $text, ?int $excludeId = null): string
     {
         $slug = Str::slug($text);
@@ -68,9 +65,6 @@ class Wishlist extends Model
         return $slug;
     }
 
-    /**
-     * Get the share URL.
-     */
     public function getShareUrl(): ?string
     {
         if (!$this->is_public || !$this->slug) {

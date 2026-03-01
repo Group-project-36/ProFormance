@@ -2,8 +2,6 @@ const API_BASE = "/api";
 const API_DASHBOARD_STATS = `${API_BASE}/dashboard/stats`;
 const API_RECENT_ORDERS = `${API_BASE}/dashboard/recent-orders`;
 const API_PRODUCTS = `${API_BASE}/products`;
-
-// Constants
 const LOW_STOCK_THRESHOLD = 10;
 
 // Currency
@@ -55,7 +53,7 @@ const loadDashboardStats = async () => {
     }
 };
 
-//Load Recent Five Orders
+//Load Recent Orders
 const loadDashboardOrders = async () => {
     const tbody = document.querySelector(".recent-orders .orders-table tbody");
     if (!tbody) return;
@@ -90,92 +88,53 @@ const loadDashboardOrders = async () => {
         console.error("[Dashboard] Failed to load orders:", err);
     }
 };
-document.addEventListener("DOMContentLoaded", () => {
-    loadDashboardStats();
-    loadDashboardOrders();
 
-    if (typeof initActionSearch === 'function') initActionSearch();
-    if (typeof initProfileDropdown === 'function') initProfileDropdown();
-});
-
-//Product load view
-
-document.querySelectorAll('.nav a').forEach(link => {
-  if (link.textContent.includes("Products")) {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.querySelectorAll('.nav a').forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
-      initProductPage();
-    });
-  }
-});
-//initialize Product Function
+//Product Management (SPA)
 function initProductPage() {
   const content = document.querySelector('.content');
   if (!content) return;
   //Product Layout(View Product HTML)
-  content.innerHTML = `
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h1>Product Management</h1>
-        <button class="action-btn" id="open-add-modal">+ Add Product</button>
-      </div>
-      <div class="search-box" style="margin-top: 15px;">
-         <input type="text" id="product-search" placeholder="Search products..." style="width: 100%; padding: 10px;">
-         <button id="product-search-btn" style="display:none;">Search</button>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>Total Inventory</h3>
-            <p class="stat-number" id="total-stock-count">-</p>
-        </div>
-        <div class="stat-card">
-            <h3>Low Stock Items</h3>
-            <p class="stat-number" id="low-stock-count">-</p>
-        </div>
-    </div>
-
-    <div class="card">
-      <table class="orders-table">
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th>Product Name / SKU</th>
-                <th>Price</th>
-                <th>Stock Level</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="product-table-body">
-            <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="product-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
-      <div style="background:white; margin:5% auto; padding:20px; width:50%; border-radius:8px;">
-        <h2 id="modal-title">Add Product</h2>
-        <form id="product-form" style="display:flex; flex-direction:column; gap:10px;">
-            <input type="hidden" id="p_id">
-            <input type="text" id="p_name" placeholder="Product Name" required style="padding:8px;">
-            <input type="text" id="p_sku" placeholder="SKU" required style="padding:8px;">
-            <input type="number" id="p_price" placeholder="Price ($)" step="0.01" required style="padding:8px;">
-            <input type="number" id="p_stock" placeholder="Stock Quantity" required style="padding:8px;">
-            <input type="text" id="p_image" placeholder="Image URL" style="padding:8px;">
-            <textarea id="p_desc" placeholder="Description" rows="3" style="padding:8px;"></textarea>
-            
-            <div style="margin-top:10px; text-align:right;">
-                <button type="button" onclick="closeModal()" style="padding:8px 15px;">Cancel</button>
-                <button type="submit" class="action-btn" style="padding:8px 15px;">Save</button>
+content.innerHTML = `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>Product Management</h1>
+                <button class="action-btn" id="open-add-modal">+ Add Product</button>
             </div>
-        </form>
-      </div>
-    </div>
-  `;
+            <div class="search-box" style="margin-top: 15px;">
+                 <input type="text" id="product-search" placeholder="Search products..." style="width: 100%; padding: 10px;">
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Total Inventory</h3><p class="stat-number" id="total-stock-count">-</p></div>
+            <div class="stat-card"><h3>Low Stock Items</h3><p class="stat-number" id="low-stock-count">-</p></div>
+        </div>
+        <div class="card">
+            <table class="orders-table">
+                <thead>
+                    <tr><th>Image</th><th>Product / SKU</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="product-table-body"><tr><td colspan="6" style="text-align:center;">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <div id="product-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:white; margin:5% auto; padding:20px; width:50%; border-radius:8px;">
+                <h2 id="modal-title">Add Product</h2>
+                <form id="product-form" style="display:flex; flex-direction:column; gap:10px;">
+                    <input type="hidden" id="p_id">
+                    <input type="text" id="p_name" placeholder="Product Name" required>
+                    <input type="text" id="p_sku" placeholder="SKU" required>
+                    <input type="number" id="p_price" placeholder="Price" step="0.01" required>
+                    <input type="number" id="p_stock" placeholder="Stock Quantity" required>
+                    <input type="text" id="p_image" placeholder="Image URL">
+                    <textarea id="p_desc" placeholder="Description"></textarea>
+                    <div style="text-align:right;">
+                        <button type="button" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="action-btn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
   document.getElementById("open-add-modal").addEventListener("click", () => openModal());
   document.getElementById("product-form").addEventListener("submit", handleProductSubmit);
   document.getElementById("product-search").addEventListener("keyup", handleSearch);
@@ -199,21 +158,46 @@ async function loadProducts() {
 }
 
 function renderProducts(products) {
-  const tbody = document.getElementById("product-table-body");
-  tbody.innerHTML = "";
+    const tbody = document.getElementById("product-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = products.length ? "" : '<tr><td colspan="6" style="text-align:center;">No products found</td></tr>';
 
-  if (!products || products.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No products found</td></tr>';
-    return;
-  }
-  const htmlRows = products.map(p => {
+    products.forEach(p => {
+        let statusBadge = p.stock_quantity > LOW_STOCK_THRESHOLD 
+            ? '<span class="status completed">In Stock</span>' 
+            : (p.stock_quantity > 0 ? '<span class="status pending">Low Stock</span>' : '<span class="status cancelled">Out of Stock</span>');
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><img src="${p.image_url || 'assets/placeholder.png'}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
+            <td><strong>${p.product_name}</strong><br><small>SKU: ${p.sku || '-'}</small></td>
+            <td>$${parseFloat(p.price).toFixed(2)}</td>
+            <td>${p.stock_quantity}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <button onclick='editProduct(${JSON.stringify(p)})'>Edit</button>
+                <button onclick="deleteProduct(${p.id})" style="color:red; margin-left:10px;">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}  
+
+function updateStockAlerts(products) {
+    const lowStock = products.filter(p => p.stock_quantity <= LOW_STOCK_THRESHOLD).length;
+    const total = products.reduce((sum, p) => sum + parseInt(p.stock_quantity || 0), 0);
     
-// Status of stock
+    if (document.getElementById("low-stock-count")) {
+        document.getElementById("low-stock-count").innerText = lowStock;
+        document.getElementById("total-stock-count").innerText = total;
+    }
+}
+
+ /* Status of stock
   let statusBadge = '<span class="status completed">In Stock</span>';
   if (p.stock_quantity == 0) statusBadge = '<span class="status cancelled">Out of Stock</span>';
   else if (p.stock_quantity <= LOW_STOCK_THRESHOLD) statusBadge = '<span class="status pending">Low Stock</span>';
 
-  // Format Price
   const displayPrice = parseFloat(p.price).toFixed(2); 
 
   return `
@@ -236,8 +220,9 @@ function renderProducts(products) {
 
   tbody.innerHTML = htmlRows.join('');
 }
+*/
 
-// Low Stock Alert
+/* Low Stock Alert
 function updateStockAlerts(products) {
     // Calculate for low stocks
     const lowStockItems = products.filter(p => p.stock_quantity <= LOW_STOCK_THRESHOLD).length;
@@ -253,211 +238,120 @@ function updateStockAlerts(products) {
     const totalStockEl = document.getElementById("total-stock-count");
     if(totalStockEl) totalStockEl.innerText = totalItems;
 }
+*/
+
+// UI Component
 // Search Function
-async function handleSearch() {
-  const keyword = document.getElementById("product-search").value.toLowerCase();
-  const res = await fetch(API_PRODUCTS);
-  const list = await res.json();
-
-  const filtered = list.filter(p => 
-    (p.product_name || "").toLowerCase().includes(keyword) || 
-    (p.sku || "").toLowerCase().includes(keyword)
-  );
-
-  renderProducts(filtered);
-}
-
-// Add/Edit/Delete
-
-//Delete
-async function deleteProduct(id) {
-  if (!confirm('Are you sure you want to delete this product?')) return;
-
-  try {
-    const res = await fetch(`${API_PRODUCTS}/${id}`, { 
-      method: "DELETE" 
-    });
-
-    if (res.ok) {
-       await loadProducts();
-    } else {
-      alert('Failed to delete product.');
-    }
-  } catch (err) {
-    console.error("Error deleting product:", err);
-  }
-}
-
-//Submit (Add,Edit)
-async function handleProductSubmit(e) {
-  e.preventDefault();
-
-  const id = document.getElementById("p_id").value;
-  const formData = ["p_name", "p_sku", "p_price", "p_stock", "p_image", "p_desc"]
-    .reduce((data, field) => {
-      data[field.replace("p_", "")] = document.getElementById(field).value;
-      return data;
-    }, { is_active: 1 });
-
-  try {
-    const method = id ? "PUT" : "POST";
-    const url = id ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
-    });
-
-    if (res.ok) {
-      closeModal();
-      loadProducts();
-    } else {
-      alert("Failed to save product.");
-    }
-  } catch (err) {
-    console.error("Error saving product:", err);
-  }
-}
-
-//Reset
-function openModal() {
-    document.getElementById("product-form").reset();
-    document.getElementById("p_id").value = ""; 
-    document.getElementById("modal-title").innerText = "Add Product";
-    document.getElementById("product-modal").style.display = "block";
-}
-
-// Edit button in table
-
-function editProduct(product) {
-    document.getElementById("p_id").value = product.id;
-    document.getElementById("p_name").value = product.product_name;
-    document.getElementById("p_sku").value = product.sku;
-    document.getElementById("p_price").value = product.price;
-    document.getElementById("p_stock").value = product.stock_quantity;
-    document.getElementById("p_image").value = product.image_url;
-    document.getElementById("p_desc").value = product.description || "";
-
-    document.getElementById("modal-title").innerText = "Edit Product";
-    document.getElementById("product-modal").style.display = "block";
-}
-
-function closeModal() {
-    document.getElementById("product-modal").style.display = "none";
-}
-
-// UI Controllers
-const initProfileDropdown = () => {
-    const avatarBtn = document.getElementById("profile-avatar");
-    const dropdown = document.getElementById("profile-dropdown");
-
-    if (!avatarBtn || !dropdown) return;
-
-    // Toggle Update
-    avatarBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isShowing = dropdown.classList.toggle("show");
-        avatarBtn.setAttribute("aria-expanded", isShowing);
-    });
-
-    // Click to close
-    window.addEventListener("click", (e) => {
-        if (!avatarBtn.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.remove("show");
-            avatarBtn.setAttribute("aria-expanded", "false");
-        }
-    });
-
-    // Esc to close
-    window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && dropdown.classList.contains("show")) {
-            dropdown.classList.remove("show");
-            avatarBtn.setAttribute("aria-expanded", "false");
-            avatarBtn.focus();
-        }
-    });
-};
-
-// Event Listeners Initialization
-document.addEventListener("DOMContentLoaded", () => {
-    initProfileDropdown();
-
-    const changePwBtn = document.getElementById("change-pw-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-
-    if (changePwBtn) {
-        changePwBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            console.log("Trigger Change Password Modal");
-        });
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            console.log("Processing Logout...");
-        });
-    }
-});
-
-// Global Action Search (Command Palette)
-const systemActions = [
-    { title: "Dashboard Overview", url: "index.html", icon: "fa-border-all", type: "Page" },
-    { title: "Manage Customers", url: "customer.html", icon: "fa-users", type: "Page" },
-    { title: "Add New Customer", url: "customer.html", icon: "fa-user-plus", type: "Action" },
-    { title: "Manage Products", url: "products.html", icon: "fa-dumbbell", type: "Page" },
-    { title: "Add New Product", url: "products.html", icon: "fa-plus", type: "Action" },
-    { title: "View Sales Report", url: "sales.html", icon: "fa-chart-column", type: "Page" },
-    { title: "System Settings", url: "#", icon: "fa-gear", type: "Setting" },
-    { title: "Logout", url: "#", icon: "fa-sign-out-alt", type: "Action" }
-];
-
 const initActionSearch = () => {
     const searchInput = document.getElementById("main-search");
     const resultsContainer = document.getElementById("search-results");
-
     if (!searchInput || !resultsContainer) return;
 
     searchInput.addEventListener("input", (e) => {
         const keyword = e.target.value.toLowerCase().trim();
-        
-        if (!keyword) {
-            resultsContainer.classList.remove("show");
-            return;
-        }
+        if (!keyword) return resultsContainer.classList.remove("show");
 
-        // 1. Filter keywords
-        const filteredActions = systemActions.filter(action => 
-            action.title.toLowerCase().includes(keyword) || 
-            action.type.toLowerCase().includes(keyword)
-        );
-
-        resultsContainer.innerHTML = ""; 
-        
-        if (filteredActions.length === 0) {
-            resultsContainer.innerHTML = '<div class="search-empty">No matching functions found</div>';
-        } else {
-            const htmlString = filteredActions.map(action => `
-                <a href="${action.url}" class="search-item">
-                    <i class="fas ${action.icon}"></i>
-                    <span>${action.title}</span>
-                    <span class="item-type">${action.type}</span>
-                </a>
-            `).join('');
-            resultsContainer.innerHTML = htmlString;
-        }
-        // Show List
+        const filtered = systemActions.filter(a => a.title.toLowerCase().includes(keyword));
+        resultsContainer.innerHTML = filtered.length 
+            ? filtered.map(a => `<a href="${a.url}" class="search-item"><i class="fas ${a.icon}"></i> <span>${a.title}</span></a>`).join('')
+            : '<div class="search-empty">No results found</div>';
         resultsContainer.classList.add("show");
     });
-    // Click other places to close
-    window.addEventListener("click", (e) => {
-        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
-            resultsContainer.classList.remove("show");
-        }
+
+    window.addEventListener("click", (e) => { if (!searchInput.contains(e.target)) resultsContainer.classList.remove("show"); });
+};
+
+const initProfileDropdown = () => {
+    const btn = document.getElementById("profile-avatar");
+    const menu = document.getElementById("profile-dropdown");
+    if (!btn || !menu) return;
+
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const shown = menu.classList.toggle("show");
+        btn.setAttribute("aria-expanded", shown);
+    });
+
+    window.addEventListener("click", () => {
+        menu.classList.remove("show");
+        btn.setAttribute("aria-expanded", "false");
     });
 };
-// Ensure to load with function
+
+// App Initailisation
+const systemActions = [
+    { title: "Dashboard Overview", url: "index.html", icon: "fa-border-all", type: "Page" },
+    { title: "Manage Customers", url: "customer.html", icon: "fa-users", type: "Page" },
+    { title: "Manage Products", url: "products.html", icon: "fa-dumbbell", type: "Page" }
+];
+
 document.addEventListener("DOMContentLoaded", () => {
+    loadDashboardStats();
+    loadDashboardOrders();
     initActionSearch();
+    initProfileDropdown();
+
+    document.querySelectorAll('.nav a').forEach(link => {
+        if (link.textContent.includes("Products")) {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                initProductPage();
+            });
+        }
+    });
 });
+
+
+// Product helpers (Global scope for inline onclicks)
+function openModal() { document.getElementById("product-modal").style.display = "block"; }
+function closeModal() { document.getElementById("product-modal").style.display = "none"; }
+
+async function handleProductSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById("p_id").value;
+    const formData = {
+        product_name: document.getElementById("p_name").value,
+        sku: document.getElementById("p_sku").value,
+        price: document.getElementById("p_price").value,
+        stock_quantity: document.getElementById("p_stock").value,
+        image_url: document.getElementById("p_image").value,
+        description: document.getElementById("p_desc").value
+    };
+
+    try {
+        const method = id ? "PUT" : "POST";
+        const url = id ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
+        const res = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData)
+        });
+        if (res.ok) { closeModal(); loadProducts(); }
+    } catch (err) { console.error("Save failed:", err); }
+}
+
+async function handleSearch() {
+    const keyword = document.getElementById("product-search").value.toLowerCase();
+    const res = await fetch(API_PRODUCTS);
+    const list = await res.json();
+    renderProducts(list.filter(p => p.product_name.toLowerCase().includes(keyword)));
+}
+
+function editProduct(p) {
+    document.getElementById("p_id").value = p.id;
+    document.getElementById("p_name").value = p.product_name;
+    document.getElementById("p_sku").value = p.sku;
+    document.getElementById("p_price").value = p.price;
+    document.getElementById("p_stock").value = p.stock_quantity;
+    document.getElementById("modal-title").innerText = "Edit Product";
+    openModal();
+}
+
+async function deleteProduct(id) {
+    if (confirm('Delete this product?')) {
+        await fetch(`${API_PRODUCTS}/${id}`, { method: "DELETE" });
+        loadProducts();
+    }
+}

@@ -108,3 +108,18 @@ document.getElementById("customer-form").addEventListener("submit", async functi
 
 // Load Customer 
 loadCustomers();
+
+// Modal Screen
+document.getElementById("add-customer-btn").addEventListener("click", () => {
+  document.getElementById("customer-form").reset(); // 清空表單
+  document.getElementById("add-customer-modal").style.display = "block";
+});
+
+//Close Btn
+function closeAddCustomerModal() {
+  document.getElementById("add-customer-modal").style.display = "none";
+}
+function closeModal() {
+  closeAddCustomerModal();
+}
+document.querySelector(".modal-close").addEventListener("click", closeAddCustomerModal);

@@ -59,8 +59,16 @@
             </div>
           
             <div class="top-actions">
-                <span class="notification"></span> 
-                <div class="avatar">A</div>
+              <span class="notification"></span> 
+              <div class="profile-container" style="position: relative; cursor: pointer;">
+                <div class="avatar" id="profile-avatar">A</div>
+        
+                <div class="profile-dropdown" id="profile-dropdown">
+                  <div class="profile-header">Admin Name</div>
+                  <a href="#" id="change-pw-btn"><i class="fas fa-key"></i> Change Password</a>
+                  <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+              </div>
             </div>
         </header>
         
@@ -89,9 +97,8 @@
           </div>
       </div>
           <div class="quick-actions">
-            <button class="action-btn"> Add Product</button>
-            <button class="action-btn"> Create Order</button>
-            <button class="action-btn"> View Report</button>
+            <button class="action-btn primary" onclick="window.location.href='products.html'">Add Product</button>
+            <button class="action-btn" onclick="window.location.href='sales.html'">View Report</button>
           </div>
 
       <div class="card recent-orders">

@@ -1,6 +1,59 @@
-const API_PRODUCTS = "/api/products";
-const LOW_STOCK_THRESHOLD = 10;
+const API_DASHBOARD_STATS = "/api/dashboard/stats";
+const API_RECENT_ORDERS = "/api/dashboard/recent-orders";
 
+// Currency
+const formatCurrency = (pennies, currency = 'GBP') => {
+    const config = {
+        'GBP': 'en-GB',
+        'USD': 'en-US',
+        'EUR': 'de-DE'  
+    };
+
+    const locale = config[currency] || 'en-GB';
+
+    return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currency,
+    }).format(pennies / 100);
+};
+
+// Mock Load Data
+const loadDashboardStats = async () => {
+    const mockStats = {
+        totalSalesPenny: 1243000, 
+        totalOrders: 380,
+        totalCustomers: 142,
+        lowStockItems: 5
+    };
+  // Dashboard Stats Cards
+    try {
+        const res = await fetch(API_DASHBOARD_STATS);
+        const stats = res.ok ? await res.json() : mockStats;
+        
+        const statCards = document.querySelectorAll(".stat-card .stat-number");
+        
+        if (statCards.length >= 4) {
+            statCards[0].innerText = formatCurrency(stats.total_sales_penny);
+            statCards[1].innerText = stats.total_orders;
+            statCards[2].innerText = stats.total_customers;
+            statCards[3].innerText = stats.low_stock;
+        }
+      // If error,won't blank
+    } catch (err) {
+        console.warn("[Dashboard] Using Mock Stats due to network error.");
+        const statCards = document.querySelectorAll(".stat-card .stat-number");
+        statCards[0].innerText = formatCurrency(mockStats.total_sales_penny);
+        statCards[1].innerText = mockStats.total_orders;
+        statCards[2].innerText = mockStats.total_customers;
+        statCards[3].innerText = mockStats.low_stock;
+    }
+};
+
+//Load Recent Five Orders
+const loadDashboardOrders = async () => {
+    const tbody = document.querySelector(".recent-orders .orders-table tbody");
+    if (!tbody) return;
+  
 //Product load view
 
 document.querySelectorAll('.nav a').forEach(link => {

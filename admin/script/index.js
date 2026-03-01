@@ -32,6 +32,7 @@ const loadDashboardData = async () => {
         const stats = res.ok ? await res.json() : mockStats;
         
         const statCards = document.querySelectorAll(".stat-card .stat-number");
+        if (cards.length >= 4) { ... } 
         
         if (cards.length >= 4) {
             cards[0].innerText = formatCurrency(stats.total_sales_penny);

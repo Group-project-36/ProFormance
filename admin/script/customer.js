@@ -80,7 +80,8 @@ function renderCustomers(customers) {
 // Add Customer Submission 
 document.getElementById("customer-form").addEventListener("submit", async function(e) {
   e.preventDefault();
-  
+
+  const id = document.getElementById("customer-id").value;
   const newData = {
     FullName: document.getElementById("name").value,
     Email: document.getElementById("email").value,
@@ -90,8 +91,11 @@ document.getElementById("customer-form").addEventListener("submit", async functi
   };
   
   try {
+    const method = id ? "PUT" : "POST";
+    const url = id ? `${API_CUSTOMERS}/${id}` : API_CUSTOMERS;
+    
     const res = await fetch(API_CUSTOMERS, {
-      method: "POST",
+      method: method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newData)
     });

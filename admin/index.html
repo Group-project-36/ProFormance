@@ -60,16 +60,17 @@
           
             <div class="top-actions">
               <span class="notification"></span> 
-              <div class="profile-container" style="position: relative; cursor: pointer;">
-                <div class="avatar" id="profile-avatar">A</div>
+    
+              <div class="profile-container">
+                <button class="avatar" id="profile-avatar" aria-haspopup="true" aria-expanded="false" aria-label="User menu">A</button>
         
-                <div class="profile-dropdown" id="profile-dropdown">
-                  <div class="profile-header">Admin Name</div>
-                  <a href="#" id="change-pw-btn"><i class="fas fa-key"></i> Change Password</a>
-                  <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <div class="profile-dropdown" id="profile-dropdown" role="menu">
+                    <div class="profile-header">Admin Name</div>
+                    <a href="#" id="change-pw-btn" role="menuitem"><i class="fas fa-key"></i> Change Password</a>
+                    <a href="#" id="logout-btn" role="menuitem"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                  </div>
                 </div>
               </div>
-            </div>
         </header>
         
         <section class="content">

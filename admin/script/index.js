@@ -304,53 +304,63 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Utility Functions
-const debounce = (func, delay = 300) => {
-    let timeoutId;
-    return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(null, args);
-        }, delay);
-    };
-};
+// Global Action Search (Command Palette)
+const systemActions = [
+    { title: "Dashboard Overview", url: "index.html", icon: "fa-border-all", type: "Page" },
+    { title: "Manage Customers", url: "customer.html", icon: "fa-users", type: "Page" },
+    { title: "Add New Customer", url: "customer.html", icon: "fa-user-plus", type: "Action" },
+    { title: "Manage Products", url: "products.html", icon: "fa-dumbbell", type: "Page" },
+    { title: "Add New Product", url: "products.html", icon: "fa-plus", type: "Action" },
+    { title: "View Sales Report", url: "sales.html", icon: "fa-chart-column", type: "Page" },
+    { title: "System Settings", url: "#", icon: "fa-gear", type: "Setting" },
+    { title: "Logout", url: "#", icon: "fa-sign-out-alt", type: "Action" }
+];
 
-// Global Search Controller 
-const initGlobalSearch = () => {
+const initActionSearch = () => {
     const searchInput = document.getElementById("main-search");
-    if (!searchInput) return;
+    const resultsContainer = document.getElementById("search-results");
 
-    const handleSearch = (e) => {
+    if (!searchInput || !resultsContainer) return;
+
+    searchInput.addEventListener("input", (e) => {
         const keyword = e.target.value.toLowerCase().trim();
-        console.log(`[Global Search] Executing search for: "${keyword}"`);
-
-        // Lock Dashboard Rows
-        const orderRows = document.querySelectorAll(".recent-orders .orders-table tbody tr");
         
-        // Check Row by Row
-        let visibleCount = 0;
-        orderRows.forEach(row => {
-            if (row.cells.length === 1) return; 
+        if (!keyword) {
+            resultsContainer.classList.remove("show");
+            return;
+        }
 
-            const textContent = row.textContent.toLowerCase();
-            
-            if (textContent.includes(keyword)) {
-                row.style.display = ""; 
-                visibleCount++;
-            } else {
-                row.style.display = "none"; 
-            }
-        });
+        // 1. Filter keywords
+        const filteredActions = systemActions.filter(action => 
+            action.title.toLowerCase().includes(keyword) || 
+            action.type.toLowerCase().includes(keyword)
+        );
 
-        console.log(`[Global Search] Found ${visibleCount} matching rows.`);
-    };
-    searchInput.addEventListener("input", debounce(handleSearch, 300));
+        resultsContainer.innerHTML = ""; 
+        
+        if (filteredActions.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-empty">No matching functions found</div>';
+        } else {
+            const htmlString = filteredActions.map(action => `
+                <a href="${action.url}" class="search-item">
+                    <i class="fas ${action.icon}"></i>
+                    <span>${action.title}</span>
+                    <span class="item-type">${action.type}</span>
+                </a>
+            `).join('');
+            resultsContainer.innerHTML = htmlString;
+        }
+        // Show List
+        resultsContainer.classList.add("show");
+    });
+    // Click other places to close
+    window.addEventListener("click", (e) => {
+        if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.classList.remove("show");
+        }
+    });
 };
-
+// Ensure to load with function
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof initProfileDropdown === 'function') {
-        initProfileDropdown();
-    }
-    
-    initGlobalSearch();
+    initActionSearch();
 });

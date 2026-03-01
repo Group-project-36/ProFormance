@@ -214,3 +214,65 @@ const initUI = () => {
         };
     }
 };
+
+//Sales Chart
+const initSalesChart = async () => {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+
+    // 1. Define Mock Data (Before Back-end)
+    const mockData = {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        values: [1200, 1900, 3000, 5000, 2400, 3500, 4200]
+    };
+
+    try {
+        const res = await fetch("/api/analytics/sales");
+        const data = res.ok ? await res.json() : mockData;
+
+        renderChart(ctx, data.labels, data.values);
+    } catch (err) {
+        console.warn("[Chart] Using mock data for local preview.");
+        renderChart(ctx, mockData.labels, mockData.values);
+    }
+};
+
+
+const renderChart = (ctx, labels, data) => {
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue (£)',
+                data: data,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { callback: (val) => '£' + val }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+};
+document.addEventListener("DOMContentLoaded", () => {
+    loadDashboardStats();
+    loadDashboardOrders();
+    initSalesChart(); 
+});

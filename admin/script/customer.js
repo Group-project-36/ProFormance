@@ -131,7 +131,9 @@ loadCustomers();
 
 // Modal Screen
 document.getElementById("add-customer-btn").addEventListener("click", () => {
-  document.getElementById("customer-form").reset(); // 清空表單
+  document.getElementById("customer-form").reset(); 
+  document.getElementById("customer-id").value = ""; // 
+  document.querySelector(".modal-header h2").innerText = "Add New Customer";
   document.getElementById("add-customer-modal").style.display = "block";
 });
 

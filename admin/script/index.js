@@ -304,4 +304,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// Utility Functions
+const debounce = (func, delay = 300) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(null, args);
+        }, delay);
+    };
+};
 
+// Global Search Controller 
+const initGlobalSearch = () => {
+    const searchInput = document.getElementById("main-search");
+    if (!searchInput) return;
+
+    const handleSearch = (e) => {
+        const keyword = e.target.value.toLowerCase().trim();
+        console.log(`[Global Search] Executing search for: "${keyword}"`);
+
+        // Lock Dashboard Rows
+        const orderRows = document.querySelectorAll(".recent-orders .orders-table tbody tr");
+        
+        // Check Row by Row
+        let visibleCount = 0;
+        orderRows.forEach(row => {
+            if (row.cells.length === 1) return; 
+
+            const textContent = row.textContent.toLowerCase();
+            
+            if (textContent.includes(keyword)) {
+                row.style.display = ""; 
+                visibleCount++;
+            } else {
+                row.style.display = "none"; 
+            }
+        });
+
+        console.log(`[Global Search] Found ${visibleCount} matching rows.`);
+    };
+    searchInput.addEventListener("input", debounce(handleSearch, 300));
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof initProfileDropdown === 'function') {
+        initProfileDropdown();
+    }
+    
+    initGlobalSearch();
+});

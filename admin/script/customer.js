@@ -68,6 +68,7 @@ function renderCustomers(customers) {
         <td>${customer.OrdersCount ?? "-"}</td>
         <td>${customer.Status || "Active"}</td>
         <td>
+          <button class="edit-btn" style="color: blue; cursor: pointer; border: none; background: none;" onclick='editCustomer(${JSON.stringify(customer)})'>Edit</button>
           <button class="delete-btn" onclick="deleteCustomer(${customer.CustomerID})">Delete</button>
         </td>
       </tr>
@@ -105,7 +106,22 @@ document.getElementById("customer-form").addEventListener("submit", async functi
     console.error("Error adding customer:", err);
   }
 });
+// Edit Customer
+function editCustomer(customer) {
+  // Customer ID input
+  document.getElementById("customer-id").value = customer.CustomerID;
+  
+  // Other Details
+  document.getElementById("name").value = customer.FullName || customer.name;
+  document.getElementById("email").value = customer.Email || customer.email;
+  document.getElementById("join-date").value = customer.JoinDate || "";
+  document.getElementById("orders").value = customer.OrdersCount || 0;
+  document.getElementById("status").value = customer.Status || "Active";
 
+  // Title
+  document.querySelector(".modal-header h2").innerText = "Edit Customer";
+  document.getElementById("add-customer-modal").style.display = "block";
+}
 // Load Customer 
 loadCustomers();
 

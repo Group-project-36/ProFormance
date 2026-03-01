@@ -32,11 +32,11 @@ const loadDashboardData = async () => {
         const stats = res.ok ? await res.json() : mockStats;
         
         const statCards = document.querySelectorAll(".stat-card .stat-number");
-        if (cards.length >= 4) {
-            cards[0].innerText = formatCurrency(stats.total_sales_penny);
-            cards[1].innerText = stats.total_orders;
-            cards[2].innerText = stats.total_customers;
-            cards[3].innerText = stats.low_stock;
+        if (statCards.length >= 4) {
+            statCards[0].innerText = formatCurrency(stats.total_sales_penny);
+            statCards[1].innerText = stats.total_orders;
+            statCards[2].innerText = stats.total_customers;
+            statCards[3].innerText = stats.low_stock;
         }
     } catch (e) { console.warn("Using mock stats."); }
   // Update Recent Orders

@@ -20,10 +20,10 @@ const formatCurrency = (pennies, currency = 'GBP') => {
 // Mock Load Data
 const loadDashboardStats = async () => {
     const mockStats = {
-        totalSalesPenny: 1243000, 
-        totalOrders: 380,
-        totalCustomers: 142,
-        lowStockItems: 5
+        total_sales_penny: 1243000, 
+        total_orders: 380,
+        total_customers: 142,
+        low_stock: 5
     };
   // Dashboard Stats Cards
     try {

@@ -53,7 +53,41 @@ const loadDashboardStats = async () => {
 const loadDashboardOrders = async () => {
     const tbody = document.querySelector(".recent-orders .orders-table tbody");
     if (!tbody) return;
-  
+    // Mock Data
+    const mockOrders = [
+        { order_number: "1024", ship_recipient_name: "Bruno Mars", created_at: "2025-11-14", total_penny: 12000, order_status: "Fulfilled" },
+        { order_number: "1025", ship_recipient_name: "Chris Wong", created_at: "2025-11-14", total_penny: 8900, order_status: "Pending" },
+        { order_number: "1026", ship_recipient_name: "Michael Jackson", created_at: "2025-11-15", total_penny: 24000, order_status: "Cancelled" }
+    ];
+
+    try {
+        const res = await fetch(API_RECENT_ORDERS);
+        const orders = res.ok ? await res.json() : mockOrders;
+        tbody.innerHTML = ""; 
+        orders.forEach(order => {
+            const tr = document.createElement("tr");
+            // Based on DB cases
+            const statusClass = order.order_status.toLowerCase(); 
+            tr.innerHTML = `
+                <td>#${order.order_number}</td>
+                <td>${order.ship_recipient_name}</td>
+                <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                <td>${formatCurrency(order.total_penny)}</td>
+                <td><span class="status ${statusClass}">${order.order_status}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error("[Dashboard] Failed to load orders:", err);
+    }
+};
+document.addEventListener("DOMContentLoaded", () => {
+    loadDashboardStats();
+    loadDashboardOrders();
+
+    if (typeof initActionSearch === 'function') initActionSearch();
+    if (typeof initProfileDropdown === 'function') initProfileDropdown();
+});
 //Product load view
 
 document.querySelectorAll('.nav a').forEach(link => {

@@ -1,30 +1,37 @@
-const API_DASHBOARD_STATS = "/api/dashboard/stats";
-const API_RECENT_ORDERS = "/api/dashboard/recent-orders";
+const API_BASE = "/api";
+const API_DASHBOARD_STATS = `${API_BASE}/dashboard/stats`;
+const API_RECENT_ORDERS = `${API_BASE}/dashboard/recent-orders`;
+const API_PRODUCTS = `${API_BASE}/products`;
+
+// Constants
+const LOW_STOCK_THRESHOLD = 10;
 
 // Currency
 const formatCurrency = (pennies, currency = 'GBP') => {
-    const config = {
-        'GBP': 'en-GB',
-        'USD': 'en-US',
-        'EUR': 'de-DE'  
-    };
-
+    const config = { 'GBP': 'en-GB', 'USD': 'en-US', 'EUR': 'de-DE' };
     const locale = config[currency] || 'en-GB';
 
     return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: currency,
-    }).format(pennies / 100);
+    }).format(pennies / 100); 
 };
 
-// Mock Load Data
+// Data Formatter
+const formatDate = (timestamp) => {
+    if (!timestamp) return "-";
+    return new Date(timestamp).toLocaleDateString('en-GB');
+};
+
+// Dashboard Control
 const loadDashboardStats = async () => {
+    // Mock data matching the DB screenshot field names
     const mockStats = {
         total_sales_penny: 1243000, 
         total_orders: 380,
         total_customers: 142,
-        low_stock: 5
-    };
+        low_stock: 5 // Based on variants.available_stock
+
   // Dashboard Stats Cards
     try {
         const res = await fetch(API_DASHBOARD_STATS);
@@ -38,9 +45,8 @@ const loadDashboardStats = async () => {
             statCards[2].innerText = stats.total_customers;
             statCards[3].innerText = stats.low_stock;
         }
-      // If error,won't blank
     } catch (err) {
-        console.warn("[Dashboard] Using Mock Stats due to network error.");
+        console.warn("[Dashboard] Network error, using mock stats.");
         const statCards = document.querySelectorAll(".stat-card .stat-number");
         statCards[0].innerText = formatCurrency(mockStats.total_sales_penny);
         statCards[1].innerText = mockStats.total_orders;
@@ -53,25 +59,28 @@ const loadDashboardStats = async () => {
 const loadDashboardOrders = async () => {
     const tbody = document.querySelector(".recent-orders .orders-table tbody");
     if (!tbody) return;
-    // Mock Data
+    
+// Mock Data using exact DB field names
     const mockOrders = [
-        { order_number: "1024", ship_recipient_name: "Bruno Mars", created_at: "2025-11-14", total_penny: 12000, order_status: "Fulfilled" },
-        { order_number: "1025", ship_recipient_name: "Chris Wong", created_at: "2025-11-14", total_penny: 8900, order_status: "Pending" },
-        { order_number: "1026", ship_recipient_name: "Michael Jackson", created_at: "2025-11-15", total_penny: 24000, order_status: "Cancelled" }
+        { order_number: "ORD-1024", ship_recipient_name: "Bruno Mars", created_at: "2026-03-01 10:00:00", total_penny: 12000, order_status: "Fulfilled" },
+        { order_number: "ORD-1025", ship_recipient_name: "Chris Wong", created_at: "2026-03-01 11:30:00", total_penny: 8900, order_status: "Pending" },
+        { order_number: "ORD-1026", ship_recipient_name: "Michael Jackson", created_at: "2026-03-01 12:45:00", total_penny: 24000, order_status: "Cancelled" }
     ];
 
     try {
         const res = await fetch(API_RECENT_ORDERS);
         const orders = res.ok ? await res.json() : mockOrders;
+
         tbody.innerHTML = ""; 
         orders.forEach(order => {
             const tr = document.createElement("tr");
-            // Based on DB cases
+            // Mapping CSS classes to DB Enum
             const statusClass = order.order_status.toLowerCase(); 
+            
             tr.innerHTML = `
                 <td>#${order.order_number}</td>
                 <td>${order.ship_recipient_name}</td>
-                <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                <td>${formatDate(order.created_at)}</td>
                 <td>${formatCurrency(order.total_penny)}</td>
                 <td><span class="status ${statusClass}">${order.order_status}</span></td>
             `;
@@ -88,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof initActionSearch === 'function') initActionSearch();
     if (typeof initProfileDropdown === 'function') initProfileDropdown();
 });
+
 //Product load view
 
 document.querySelectorAll('.nav a').forEach(link => {

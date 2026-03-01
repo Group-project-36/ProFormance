@@ -250,6 +250,58 @@ function closeModal() {
     document.getElementById("product-modal").style.display = "none";
 }
 
+// UI Controllers
+const initProfileDropdown = () => {
+    const avatarBtn = document.getElementById("profile-avatar");
+    const dropdown = document.getElementById("profile-dropdown");
 
+    if (!avatarBtn || !dropdown) return;
+
+    // Toggle Update
+    avatarBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isShowing = dropdown.classList.toggle("show");
+        avatarBtn.setAttribute("aria-expanded", isShowing);
+    });
+
+    // Click to close
+    window.addEventListener("click", (e) => {
+        if (!avatarBtn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove("show");
+            avatarBtn.setAttribute("aria-expanded", "false");
+        }
+    });
+
+    // Esc to close
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && dropdown.classList.contains("show")) {
+            dropdown.classList.remove("show");
+            avatarBtn.setAttribute("aria-expanded", "false");
+            avatarBtn.focus();
+        }
+    });
+};
+
+// Event Listeners Initialization
+document.addEventListener("DOMContentLoaded", () => {
+    initProfileDropdown();
+
+    const changePwBtn = document.getElementById("change-pw-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    if (changePwBtn) {
+        changePwBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log("Trigger Change Password Modal");
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log("Processing Logout...");
+        });
+    }
+});
 
 

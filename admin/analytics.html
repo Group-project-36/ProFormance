@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Analytics</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <aside class="sidebar"> 
+        <div class="logo">
+          <img src="assets/Proformance logo.png" alt="ProFormance Logo" class="logo-img">
+        </div>
+      
+        <nav class="nav">
+          <div class="nav-section">
+              <h3>Main Menu</h3>
+              <a href="#" class="active"><i class="fas fa-border-all"></i> Overview</a>
+              <a href="#"><i class="fas fa-chart-column"></i> Analytics</a>
+              <a href="#"><i class="fas fa-dumbbell"></i> Products</a>
+              <a href="customer.html"><i class="fas fa-users"></i> Customers</a>
+              <a href="#"><i class="fas fa-cart-shopping"></i> Sales</a>
+              <a href="#"><i class="fas fa-calendar"></i> Calendar</a>
+          </div>
+
+          <div class="nav-section">
+              <h3>Management</h3>
+              <a href="#"><i class="fas fa-star"></i> Reviews</a>
+              <a href="#"><i class="fas fa-newspaper"></i> Content</a>
+              <a href="#"><i class="fas fa-comments"></i> Support Chat</a>
+          </div>
+          
+          <div class="nav-section">
+            <h3>Transactions</h3>
+            <a href="#"><i class="fas fa-wallet"></i> Payment</a>
+            <a href="#"><i class="fas fa-file-invoice"></i> Invoice</a>
+            <a href="#"><i class="fas fa-rotate-left"></i> Returns</a>
+          </div>
+
+          <div class="nav-section">
+            <h3>General</h3>
+            <a href="#"><i class="fas fa-bell"></i> Notifications</a>
+            <a href="#"><i class="fas fa-gear"></i> Settings</a>
+            <a href="#"><i class="fas fa-moon"></i> Dark Mode</a>
+          </div>
+      </nav>
+      </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div class="search-box"><input type="text" placeholder="Search analytics..." id="main-search"></div>
+            <div class="top-actions"><div class="avatar">A</div></div>
+        </header>
+        
+        <section class="content">
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>Sales & Performance Analytics</h1>
+            <div class="filters">
+                <select id="date-range" class="action-btn" style="background:white; color:black; border:1px solid #ddd;">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                </select>
+            </div>
+          </div>
+
+          <div class="analytics-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
+            <div class="card">
+                <h2>Revenue Trend (£)</h2>
+                <div style="height:300px;"><canvas id="revenueChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h2>Order Status</h2>
+                <div style="height:300px;"><canvas id="statusChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:20px;">
+            <h2>Top Selling Products</h2>
+            <div style="height:300px;"><canvas id="productsChart"></canvas></div>
+          </div>
+        </section>
+    </main>
+  </div>
+  <script src="script/analytics.js"></script>
+</body>
+</html>

@@ -607,7 +607,7 @@ button.avatar:focus-visible {
 
 /*  Global Search Results Dropdown*/
 .search-results-dropdown {
-    display: none; /* 預設隱藏 */
+    display: none; 
     position: absolute;
     top: 100%;
     left: 0;

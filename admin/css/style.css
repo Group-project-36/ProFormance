@@ -668,3 +668,11 @@ button.avatar:focus-visible {
     color: #94a3b8;
     font-size: 14px;
 }
+:root {
+    --bg-body: #f8fafc;
+    --bg-card: #ffffff;
+    --primary: #4f46e5;
+    --text-main: #1e293b;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}

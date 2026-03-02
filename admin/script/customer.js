@@ -61,12 +61,16 @@ async function handleCustomerSubmit(e) {
 document.getElementById("customer-form").addEventListener("submit", async function(e) {
     e.preventDefault();
     
+    const fullName = document.getElementById("name").value;
+    const nameParts = fullName.split(" ");
+    
     const formData = {
-        name: document.getElementById("name").value,
-        email: document.getElementById("email").value,
-        join_date: document.getElementById("join-date").value,
-        orders: document.getElementById("orders").value,
-        status: document.getElementById("status").value
+        first_name: nameParts[0] || "Unknown",
+        last_name: nameParts.slice(1).join(" ") || "",
+        email_address: document.getElementById("email").value,
+        contact_status: document.getElementById("status").value,
+        subject_select: "Support", 
+        message_description: "Added from Admin Panel" 
     };
     
     const isEdit = !!window.editingCustomerId;
@@ -79,16 +83,22 @@ document.getElementById("customer-form").addEventListener("submit", async functi
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(formData)
         });
-//Reset
+
         if (res.ok) {
             closeAddCustomerModal();
             loadCustomers();
-            window.editingCustomerId = null; 
         } else {
             alert(isEdit ? "Update failed." : "Add failed.");
         }
     } catch (err) {
-        console.error("Network error, simulating success for local demo.");
+        console.warn("Local demo: Simulating add success.");
+        mockCustomers.unshift({
+            FullName: fullName,
+            Email: formData.email_address,
+            Status: formData.contact_status,
+            JoinDate: new Date().toISOString().split('T')[0]
+        });
+        renderCustomers(mockCustomers);
         closeAddCustomerModal();
     }
 });

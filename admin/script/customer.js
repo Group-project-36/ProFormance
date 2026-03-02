@@ -23,38 +23,38 @@ function renderCustomers(customers) {
     if (!tbody) return;
     tbody.innerHTML = "";
     
-    if (!customers || customers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No customers found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = customers.map(c => `
-        <tr>
-            <td>${c.name || c.FullName}</td>
-            <td>${c.email || c.Email}</td>
-            <td>${c.join_date || c.JoinDate || "-"}</td>
-            <td>${c.orders ?? c.OrdersCount ?? 0}</td>
-            <td><span class="status ${String(c.status || c.Status).toLowerCase()}">${c.status || c.Status}</span></td>
+    customers.forEach(c => {
+        const name = c.first_name ? `${c.first_name} ${c.last_name}` : (c.FullName || "Unknown");
+        const email = c.email_address || c.Email || "-";
+        const status = c.contact_status || c.Status || "Pending";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong>${name}</strong></td>
+            <td>${email}</td>
+            <td>${c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"}</td>
+            <td>${c.order_id || "N/A"}</td>
+            <td><span class="status ${status.toLowerCase()}">${status}</span></td>
             <td>
-                <button class="edit-link" onclick='editCustomer(${JSON.stringify(c)})'>Edit</button>
-                <button class="delete-btn" onclick="deleteCustomer(${c.id || c.CustomerID})" style="color:red; margin-left:10px;">Delete</button>
+                <button class="delete-btn" onclick="deleteCustomer(${c.query_id || c.CustomerID})">Delete</button>
             </td>
-        </tr>
-    `).join('');
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 // Edit Customer
-function editCustomer(customer) {
-    document.getElementById("name").value = customer.name || customer.FullName;
-    document.getElementById("email").value = customer.email || customer.Email;
-    document.getElementById("join-date").value = customer.join_date || customer.JoinDate;
-    document.getElementById("orders").value = customer.orders ?? customer.OrdersCount;
-    document.getElementById("status").value = customer.status || customer.Status;
-    
-    // Change modal title
-    document.querySelector(".modal-header h2").innerText = "Edit Customer";
-    document.getElementById("add-customer-modal").style.display = "block";
-    window.editingCustomerId = customer.id || customer.CustomerID;
+async function handleCustomerSubmit(e) {
+    e.preventDefault();
+    const nameParts = document.getElementById("name").value.split(" ");
+
+    const newData = {
+        first_name: nameParts[0],
+        last_name: nameParts.slice(1).join(" ") || "",
+        email_address: document.getElementById("email").value,
+        contact_status: document.getElementById("status").value,
+        message_description: "Added from Admin Panel"
+    };
 }
 
 //Submit Form

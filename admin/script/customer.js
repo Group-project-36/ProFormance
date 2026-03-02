@@ -1,5 +1,9 @@
 const API_CUSTOMERS = "/api/customers";
-
+// Mock Data(for local)
+const mockCustomers = [
+    { id: 1, name: "Bruno Mars", email: "bruno@example.com", join_date: "2025-11-10", orders: 12, status: "Active" },
+    { id: 2, name: "Chris Wong", email: "chris@example.com", join_date: "2025-11-12", orders: 5, status: "Inactive" }
+];
 
 // Load Customer 
 async function loadCustomers() {
@@ -13,135 +17,88 @@ async function loadCustomers() {
   }
 }
 
-// Delete Customer Function (need provide DELETE /customers/{id})
-async function deleteCustomer(id) {
-  if (!confirm('Are you sure you want to delete this customer?')) return;
-
-  try {
-    const res = await fetch(`${API_CUSTOMERS}/${id}`, { 
-      method: "DELETE" 
-    });
-
-    if (res.ok) {
-       await loadCustomers();
-    } else {
-      alert('Failed to delete customer.');
-    }
-  } catch (err) {
-    console.error("Error deleting customer:", err);
-  }
-}
-
-// Search 
-  
-document.getElementById("search-btn").addEventListener("click", async () => {
-  const keyword = document.getElementById("customer-search").value.toLowerCase();
-
-  const res = await fetch(API_CUSTOMERS);
-  const customersList = await res.json();
-
-  const filtered = customersList.filter(c =>
-    (c.FullName || "").toLowerCase().includes(keyword) ||
-    (c.Email || "").toLowerCase().includes(keyword)
-  );
-
-  renderCustomers(filtered);
-});
-
-//render Customer
-
+//Render Table
 function renderCustomers(customers) {
-  const tbody = document.getElementById("customer-table-body");
-  tbody.innerHTML = "";
-  
-  if (!customers || customers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No customers found</td></tr>';
-    return;
-  }
-  
-  const htmlRows = customers.map(customer => {
-    return `
-      <tr>
-        <td>${customer.FullName || customer.name}</td>
-        <td>${customer.Email || customer.email}</td>
-        <td>${customer.JoinDate || "-"}</td>
-        <td>${customer.OrdersCount ?? "-"}</td>
-        <td>${customer.Status || "Active"}</td>
-        <td>
-          <button class="edit-btn" style="color: blue; cursor: pointer; border: none; background: none;" onclick='editCustomer(${JSON.stringify(customer)})'>Edit</button>
-          <button class="delete-btn" onclick="deleteCustomer(${customer.CustomerID})">Delete</button>
-        </td>
-      </tr>
-    `;
-  });
-  tbody.innerHTML = htmlRows.join('');
+    const tbody = document.getElementById("customer-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    if (!customers || customers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No customers found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = customers.map(c => `
+        <tr>
+            <td>${c.name || c.FullName}</td>
+            <td>${c.email || c.Email}</td>
+            <td>${c.join_date || c.JoinDate || "-"}</td>
+            <td>${c.orders ?? c.OrdersCount ?? 0}</td>
+            <td><span class="status ${String(c.status || c.Status).toLowerCase()}">${c.status || c.Status}</span></td>
+            <td>
+                <button class="edit-link" onclick='editCustomer(${JSON.stringify(c)})'>Edit</button>
+                <button class="delete-btn" onclick="deleteCustomer(${c.id || c.CustomerID})" style="color:red; margin-left:10px;">Delete</button>
+            </td>
+        </tr>
+    `).join('');
 }
 
-// Add Customer Submission 
-document.getElementById("customer-form").addEventListener("submit", async function(e) {
-  e.preventDefault();
-
-  const id = document.getElementById("customer-id").value;
-  const newData = {
-    FullName: document.getElementById("name").value,
-    Email: document.getElementById("email").value,
-    JoinDate: document.getElementById("join-date").value,
-    OrdersCount: document.getElementById("orders").value,
-    Status: document.getElementById("status").value
-  };
-  
-  try {
-    const method = id ? "PUT" : "POST";
-    const url = id ? `${API_CUSTOMERS}/${id}` : API_CUSTOMERS;
-    
-    const res = await fetch(API_CUSTOMERS, {
-      method: method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newData)
-    });
-
-    if (res.ok) {
-      closeModal();
-      loadCustomers();
-    } else {
-      alert("Failed to add customer.");
-    }
-  } catch (err) {
-    console.error("Error adding customer:", err);
-  }
-});
 // Edit Customer
 function editCustomer(customer) {
-  // Customer ID input
-  document.getElementById("customer-id").value = customer.CustomerID;
-  
-  // Other Details
-  document.getElementById("name").value = customer.FullName || customer.name;
-  document.getElementById("email").value = customer.Email || customer.email;
-  document.getElementById("join-date").value = customer.JoinDate || "";
-  document.getElementById("orders").value = customer.OrdersCount || 0;
-  document.getElementById("status").value = customer.Status || "Active";
-
-  // Title
-  document.querySelector(".modal-header h2").innerText = "Edit Customer";
-  document.getElementById("add-customer-modal").style.display = "block";
+    document.getElementById("name").value = customer.name || customer.FullName;
+    document.getElementById("email").value = customer.email || customer.Email;
+    document.getElementById("join-date").value = customer.join_date || customer.JoinDate;
+    document.getElementById("orders").value = customer.orders ?? customer.OrdersCount;
+    document.getElementById("status").value = customer.status || customer.Status;
+    
+    // Change modal title
+    document.querySelector(".modal-header h2").innerText = "Edit Customer";
+    document.getElementById("add-customer-modal").style.display = "block";
+    window.editingCustomerId = customer.id || customer.CustomerID;
 }
-// Load Customer 
-loadCustomers();
 
-// Modal Screen
-document.getElementById("add-customer-btn").addEventListener("click", () => {
-  document.getElementById("customer-form").reset(); 
-  document.getElementById("customer-id").value = ""; // 
-  document.querySelector(".modal-header h2").innerText = "Add New Customer";
-  document.getElementById("add-customer-modal").style.display = "block";
+//Submit Form
+document.getElementById("customer-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        join_date: document.getElementById("join-date").value,
+        orders: document.getElementById("orders").value,
+        status: document.getElementById("status").value
+    };
+    
+    const isEdit = !!window.editingCustomerId;
+    const url = isEdit ? `${API_CUSTOMERS}/${window.editingCustomerId}` : API_CUSTOMERS;
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData)
+        });
+//Reset
+        if (res.ok) {
+            closeAddCustomerModal();
+            loadCustomers();
+            window.editingCustomerId = null; 
+        } else {
+            alert(isEdit ? "Update failed." : "Add failed.");
+        }
+    } catch (err) {
+        console.error("Network error, simulating success for local demo.");
+        closeAddCustomerModal();
+    }
 });
 
-//Close Btn
+document.addEventListener("DOMContentLoaded", loadCustomers);
+
+//UI Control
 function closeAddCustomerModal() {
-  document.getElementById("add-customer-modal").style.display = "none";
+    document.getElementById("add-customer-modal").style.display = "none";
+    document.getElementById("customer-form").reset();
+    document.querySelector(".modal-header h2").innerText = "Add New Customer";
+    window.editingCustomerId = null;
 }
-function closeModal() {
-  closeAddCustomerModal();
-}
-document.querySelector(".modal-close").addEventListener("click", closeAddCustomerModal);

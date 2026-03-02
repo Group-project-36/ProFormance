@@ -2,6 +2,7 @@ const API_BASE = "/api";
 const API_DASHBOARD_STATS = `${API_BASE}/dashboard/stats`;
 const API_RECENT_ORDERS = `${API_BASE}/dashboard/recent-orders`;
 const API_PRODUCTS = `${API_BASE}/products`;
+const API_SALES_ANALYTICS = `${API_BASE}/analytics/sales`;
 const LOW_STOCK_THRESHOLD = 10;
 
 // Currency
@@ -30,8 +31,8 @@ const loadDashboardData = async () => {
     try {
         const res = await fetch(API_DASHBOARD_STATS);
         const stats = res.ok ? await res.json() : mockStats;
-        
         const statCards = document.querySelectorAll(".stat-card .stat-number");
+        
         if (statCards.length >= 4) {
             statCards[0].innerText = formatCurrency(stats.total_sales_penny);
             statCards[1].innerText = stats.total_orders;
@@ -39,6 +40,7 @@ const loadDashboardData = async () => {
             statCards[3].innerText = stats.low_stock;
         }
     } catch (e) { console.warn("Using mock stats."); }
+    
   // Update Recent Orders
     const tbody = document.querySelector(".recent-orders .orders-table tbody");
     if (!tbody) return;
@@ -57,9 +59,71 @@ const loadDashboardData = async () => {
     } catch (e) { tbody.innerHTML = "<tr><td colspan='5'>Error loading orders.</td></tr>"; }
 };    
 
-//Dropdown & Search
+
+// Sales Chart
+
+const initSalesChart = async () => {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+    const mockData = { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], values: [1200, 1900, 3000, 5000, 2400, 3500, 4200] };
+    try {
+        const res = await fetch("/api/analytics/sales");
+        const data = res.ok ? await res.json() : mockData;
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{ 
+                    label: 'Revenue (£)', 
+                    data: data.values, 
+                    borderColor: '#4f46e5', 
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)' 
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    } catch (err) { console.warn("Chart using mock data."); }
+};
+
+// Product Management (CRUD)
+
+function initProductPage() {
+    const content = document.querySelector('.content');
+    if (!content) return;
+    
+    content.innerHTML = `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>Product Management</h1>
+                <button class="action-btn" onclick="openModal()">+ Add Product</button>
+            </div>
+        </div>
+        <div class="card"><table class="orders-table">
+            <thead><tr><th>Image</th><th>Product</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+            <tbody id="product-table-body"><tr><td colspan="5" style="text-align:center;">Loading...</td></tr></tbody>
+        </table></div>
+        <div id="product-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:white; margin:5% auto; padding:20px; width:50%; border-radius:8px;">
+                <h2 id="modal-title">Add Product</h2>
+                <form id="product-form" onsubmit="handleProductSubmit(event)">
+                    <input type="hidden" id="p_id">
+                    <input type="text" id="p_name" placeholder="Name" required style="width:100%; margin-bottom:10px;">
+                    <input type="number" id="p_price" placeholder="Price" step="0.01" required style="width:100%; margin-bottom:10px;">
+                    <input type="number" id="p_stock" placeholder="Stock" required style="width:100%; margin-bottom:10px;">
+                    <div style="text-align:right;"><button type="button" onclick="closeModal()">Cancel</button><button type="submit" class="action-btn">Save</button></div>
+                </form>
+            </div>
+        </div>
+    `;
+    loadProducts();
+}
+
+// UI
+
 const initUI = () => {
-    // Profile Dropdown
+    // Dropdown 
     const avatar = document.getElementById("profile-avatar");
     const dropdown = document.getElementById("profile-dropdown");
     if (avatar && dropdown) {
@@ -67,9 +131,14 @@ const initUI = () => {
         window.onclick = () => dropdown.classList.remove("show");
     }
 
-    // Action Search
+    // Search 
     const search = document.getElementById("main-search");
     const results = document.getElementById("search-results");
+    const systemActions = [
+        { title: "Dashboard Overview", url: "index.html", icon: "fa-border-all" },
+        { title: "Manage Products", url: "#", icon: "fa-dumbbell" }
+    ];
+
     if (search && results) {
         search.oninput = (e) => {
             const kw = e.target.value.toLowerCase().trim();
@@ -81,101 +150,12 @@ const initUI = () => {
     }
 };
 
-
-
-//Product Management (CRUD)
-
-// render Product
-function renderProducts(products) {
-    const tbody = document.getElementById("product-table-body");
-    if (!tbody) return;
-    tbody.innerHTML = products.length ? "" : '<tr><td colspan="6" style="text-align:center;">No products found</td></tr>';
-
-    products.forEach(p => {
-        let statusBadge = p.stock_quantity > LOW_STOCK_THRESHOLD 
-            ? '<span class="status completed">In Stock</span>' 
-            : (p.stock_quantity > 0 ? '<span class="status pending">Low Stock</span>' : '<span class="status cancelled">Out of Stock</span>');
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><img src="${p.image_url || 'assets/placeholder.png'}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
-            <td><strong>${p.product_name}</strong><br><small>SKU: ${p.sku || '-'}</small></td>
-            <td>$${parseFloat(p.price).toFixed(2)}</td>
-            <td>${p.stock_quantity}</td>
-            <td>${statusBadge}</td>
-            <td>
-                <button class="edit-btn" onclick='editProduct(${JSON.stringify(p)})'>Edit</button>
-                <button class="delete-btn" onclick="deleteProduct(${p.id})">Delete</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Add or Edit
-async function handleProductSubmit(e) {
-    e.preventDefault();
-    const id = document.getElementById("p_id").value;
-    const formData = {
-        product_name: document.getElementById("p_name").value,
-        sku: document.getElementById("p_sku").value,
-        price: document.getElementById("p_price").value,
-        stock_quantity: document.getElementById("p_stock").value,
-        image_url: document.getElementById("p_image").value,
-        description: document.getElementById("p_desc").value
-    };
-
-    try {
-        const method = id ? "PUT" : "POST";
-        const url = id ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData)
-        });
-        if (res.ok) { 
-            closeModal(); 
-            loadProducts(); 
-        } else {
-            alert("Failed to save product. Check backend API.");
-        }
-    } catch (err) { console.error("Save failed:", err); }
-}
-
-// Edit or Delete
-function editProduct(p) {
-    document.getElementById("p_id").value = p.id;
-    document.getElementById("p_name").value = p.product_name;
-    document.getElementById("p_sku").value = p.sku;
-    document.getElementById("p_price").value = p.price;
-    document.getElementById("p_stock").value = p.stock_quantity;
-    document.getElementById("p_image").value = p.image_url || "";
-    document.getElementById("p_desc").value = p.description || "";
-    document.getElementById("modal-title").innerText = "Edit Product";
-    openModal();
-}
-
-async function deleteProduct(id) {
-    if (confirm('Are you sure you want to delete this product?')) {
-        try {
-            const res = await fetch(`${API_PRODUCTS}/${id}`, { method: "DELETE" });
-            if (res.ok) loadProducts();
-        } catch (e) { console.error("Delete failed."); }
-    }
-}
-
-// Initalisation
-const systemActions = [
-    { title: "Dashboard Overview", url: "index.html", icon: "fa-border-all" },
-    { title: "Manage Customers", url: "customer.html", icon: "fa-users" },
-    { title: "Manage Products", url: "#", icon: "fa-dumbbell" }
-];
-
 document.addEventListener("DOMContentLoaded", () => {
     loadDashboardData();
     initUI();
-    
-    //Sidebar
+    initSalesChart();
+
+// Sidebar
     document.querySelectorAll('.nav a').forEach(link => {
         if (link.textContent.includes("Products")) {
             link.onclick = (e) => { 
@@ -188,90 +168,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-//  Global scope
+// Global Helpers
 function openModal() { document.getElementById("product-modal").style.display = "block"; }
 function closeModal() { document.getElementById("product-modal").style.display = "none"; }
-async function loadProducts() { /* Call Fetch & Render */ }
-async function handleSearch() { /* Search Filter Logic */ }
-const initUI = () => {
-    const avatar = document.getElementById("profile-avatar");
-    const dropdown = document.getElementById("profile-dropdown");
-    if (avatar && dropdown) {
-        avatar.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle("show"); };
-        window.onclick = () => dropdown.classList.remove("show");
+
+async function handleProductSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById("p_id").value;
+    const url = id ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
+    // CRUD Submit
+    console.log(`Submitting to ${url}`);
+    closeModal();
+}
+
+function editProduct(p) {
+    document.getElementById("p_id").value = p.id;
+    document.getElementById("p_name").value = p.product_name;
+    document.getElementById("p_price").value = p.price;
+    document.getElementById("p_stock").value = p.stock_quantity;
+    document.getElementById("modal-title").innerText = "Edit Product";
+    openModal();
+}
+
+async function deleteProduct(id) {
+    if (confirm("Delete product?")) {
+        console.log(`Deleting product ${id}`);
+        // DELETE fetch 
     }
-
-    const search = document.getElementById("main-search");
-    const results = document.getElementById("search-results");
-    if (search && results) {
-        search.oninput = (e) => {
-            const kw = e.target.value.toLowerCase().trim();
-            if (!kw) return results.classList.remove("show");
-            const filtered = systemActions.filter(a => a.title.toLowerCase().includes(kw));
-            results.innerHTML = filtered.map(a => `<a href="${a.url}" class="search-item"><i class="fas ${a.icon}"></i> ${a.title}</a>`).join('');
-            results.classList.add("show");
-        };
-    }
-};
-
-//Sales Chart
-const initSalesChart = async () => {
-    const ctx = document.getElementById('salesChart');
-    if (!ctx) return;
-
-    // 1. Define Mock Data (Before Back-end)
-    const mockData = {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        values: [1200, 1900, 3000, 5000, 2400, 3500, 4200]
-    };
-
-    try {
-        const res = await fetch("/api/analytics/sales");
-        const data = res.ok ? await res.json() : mockData;
-
-        renderChart(ctx, data.labels, data.values);
-    } catch (err) {
-        console.warn("[Chart] Using mock data for local preview.");
-        renderChart(ctx, mockData.labels, mockData.values);
-    }
-};
-
-
-const renderChart = (ctx, labels, data) => {
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Revenue (£)',
-                data: data,
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#f1f5f9' },
-                    ticks: { callback: (val) => '£' + val }
-                },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-};
-document.addEventListener("DOMContentLoaded", () => {
-    loadDashboardStats();
-    loadDashboardOrders();
-    initSalesChart(); 
-});
+}

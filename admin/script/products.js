@@ -1,59 +1,55 @@
 
 const API_PRODUCTS = "/api/products";
-//Mock Data
-const mockProducts = [
-    { 
-        product_id: 1, 
-        product_name: "Pro Dumbbell Set", 
-        brand_id: 101, 
-        is_active: 1, 
-        stock_sum: 45, 
-        short_description: "High-quality rubber dumbbells"
-    },
-    { 
-        product_id: 2, 
-        product_name: "Weight Bench Pro", 
-        brand_id: 102, 
-        is_active: 1, 
-        stock_sum: 12,
-        short_description: "Adjustable commercial bench"
+
+const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+async function loadProducts() {
+    try {
+        const res = await fetch(API_PRODUCTS);
+        const products = await res.json();
+        renderProducts(products);
+    } catch (err) {
+        console.error("Failed to fetch products:", err);
     }
-];
-
-const renderProducts = (products) => {
-    const tbody = document.getElementById("product-table-body");
-    if (!tbody) return;
-    
-    tbody.innerHTML = products.map(p => `
-        <tr>
-            <td>
-                <div style="font-weight:600;">${p.product_name}</div>
-                <div style="font-size:12px; color:#64748b;">${p.short_description || ''}</div>
-            </td>
-            <td>ID: ${p.brand_id}</td>
-            <td>${p.stock_sum} in stock</td>
-            <td>
-                <span class="status ${p.is_active ? 'completed' : 'cancelled'}">
-                    ${p.is_active ? 'Active' : 'Inactive'}
-                </span>
-            </td>
-            <td>
-                <button class="action-btn" onclick="editProduct(${p.product_id})"><i class="fas fa-edit"></i></button>
-                <button class="delete-btn" onclick="deleteProduct(${p.product_id})"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
-};
-
-function openProductModal() { document.getElementById("product-modal").style.display = "flex"; }
-function closeProductModal() { 
-    document.getElementById("product-modal").style.display = "none";
-    document.getElementById("product-form").reset();
 }
 
-// Send form
+// Delete
+async function deleteProduct(id) {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    try {
+        const res = await fetch(`${API_PRODUCTS}/${id}`, {
+            method: "DELETE",
+            headers: {
+                "X-CSRF-TOKEN": getCsrfToken(),
+                "Content-Type": "application/json"
+            }
+        });
+// Refresh
+        if (res.ok) {
+            loadProducts();
+        } else {
+            alert("Delete failed on server.");
+        }
+    } catch (err) {
+        console.error("Error during delete:", err);
+    }
+}
+
+// 3.Edit
+function editProduct(id) {
+    document.getElementById("product-id").value = id; 
+    document.getElementById("modal-title").innerText = "Edit Product";
+    openProductModal();
+    //need to based on the ID to fill in other(e.g. product_name)
+}
+
+// 4. Submit(DB product & Variants)
 document.getElementById("product-form").onsubmit = async (e) => {
     e.preventDefault();
+    
+    const id = document.getElementById("product-id").value;
+    const isEdit = id !== "";
     
     const productPayload = {
         product_name: document.getElementById("product_name").value,
@@ -65,12 +61,36 @@ document.getElementById("product-form").onsubmit = async (e) => {
         }]
     };
 
-    console.log("Sending to Laravel API:", productPayload);
-    
-    alert("Product saved successfully (Simulated)");
-    closeProductModal();
+    const url = isEdit ? `${API_PRODUCTS}/${id}` : API_PRODUCTS;
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: {
+                "X-CSRF-TOKEN": getCsrfToken(),
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify(productPayload)
+        });
+
+        if (res.ok) {
+            alert(isEdit ? "Product updated!" : "Product created!");
+            closeProductModal();
+            loadProducts();
+        } else {
+            const errorData = await res.json();
+            console.error("Server error:", errorData);
+            alert("Save failed. Check console for details.");
+        }
+    } catch (err) {
+        console.error("Network error:", err);
+    }
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-    renderProducts(mockProducts);
-});
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.openProductModal = openProductModal;
+
+document.addEventListener("DOMContentLoaded", loadProducts);

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Product Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <aside class="sidebar" id="sidebar-placeholder"></aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div class="search-box">
+                    <input type="text" placeholder="Search products by SKU or Name..." id="main-search">
+                    <div id="search-results" class="search-results-dropdown"></div>
+                </div>
+                <div class="top-actions"><div class="avatar" id="profile-avatar">A</div></div>
+            </header>
+
+            <section class="content">
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h1>Product Management</h1>
+                    <button class="add-btn" onclick="openProductModal()">
+                        <i class="fas fa-plus"></i> Add New Product
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Brand ID</th>
+                                <th>Total Stock</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Product</h2>
+                <button class="modal-close" onclick="closeProductModal()">&times;</button>
+            </div>
+            <form id="product-form" class="modal-body">
+                <input type="hidden" id="product-id">
+                
+                <div class="form-group">
+                    <label>Product Name *</label>
+                    <input type="text" id="product_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Short Description</label>
+                    <input type="text" id="short_description">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="is_active">
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+
+                <h3 style="margin: 15px 0 10px; font-size: 16px; border-top: 1px solid #eee; padding-top: 10px;">Initial Variant (SKU)</h3>
+                <div class="form-group">
+                    <label>SKU *</label>
+                    <input type="text" id="sku" required placeholder="e.g., PF-DUM-001">
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity</label>
+                    <input type="number" id="stock_quantity" value="0">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="closeProductModal()">Cancel</button>
+                    <button type="submit" class="btn-submit">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script/common.js"></script>
+    <script src="script/products.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@ const mockProducts = [
         product_name: "Pro Dumbbell Set", 
         brand_id: 101, 
         is_active: 1, 
-        stock_sum: 45, // 來自 variants 表嘅 stock_quantity 加總
+        stock_sum: 45, 
         short_description: "High-quality rubber dumbbells"
     },
     { 

@@ -1,4 +1,3 @@
-{{-- resources/views/account/dashboard.blade.php --}}
 @extends('account.layout')
 
 @section('account-content')

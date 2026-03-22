@@ -32,20 +32,37 @@ class CartController extends Controller
 
         foreach ($cart as &$line) {
             $row = $rows[$line['variant_id']] ?? null;
+            $qty = (int)($line['quantity'] ?? 1);
 
             $line['currency'] = $currency;
             $line['symbol'] = $row->symbol ?? '£';
 
-            $netPrice = $row ? ($row->price_penny / 100) : 0;
-            $netWas   = ($row && $row->was_price_penny) ? ($row->was_price_penny / 100) : null;
+            $standardPricePenny = $row ? $row->price_penny : 0;
 
+            // Check for bulk pricing
+            $bulkPricePenny = \App\Models\BulkPricing::getPriceForQty(
+                $line['variant_id'], strtoupper($currency), $qty
+            );
+
+            $netPricePenny = ($bulkPricePenny !== null) ? $bulkPricePenny : $standardPricePenny;
+            $netPrice = $netPricePenny / 100;
+            $netWas = ($row && $row->was_price_penny) ? ($row->was_price_penny / 100) : null;
+
+            // Store pricing info
+            $line['price_penny'] = $netPricePenny;
             $line['price_ex_vat'] = $netPrice;
-            $line['was_ex_vat']   = $netWas;
-
+            $line['was_ex_vat'] = $netWas;
             $line['price'] = $this->applyVatToDecimal($netPrice, $vatRate);
-            $line['was']   = $netWas !== null ? $this->applyVatToDecimal($netWas, $vatRate) : null;
-
+            $line['was'] = $netWas !== null ? $this->applyVatToDecimal($netWas, $vatRate) : null;
             $line['vat_label'] = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
+            $line['is_bulk_price'] = ($bulkPricePenny !== null);
+
+            // Standard price for comparison (incl VAT)
+            if ($bulkPricePenny !== null && $standardPricePenny > 0) {
+                $line['standard_price'] = $this->applyVatToDecimal($standardPricePenny / 100, $vatRate);
+            } else {
+                $line['standard_price'] = null;
+            }
         }
         unset($line);
 
@@ -62,8 +79,6 @@ class CartController extends Controller
     {
         return round($price * (1 + $vatRate), 2);
     }
-
-
 
     protected function getCart(): array
     {
@@ -105,7 +120,7 @@ class CartController extends Controller
             'vatLabel'   => $vatLabel,
         ]);
     }
-
+    
     public function add(Request $request)
     {
         $validated = $request->validate([
@@ -115,110 +130,92 @@ class CartController extends Controller
 
         $variantId = $validated['variant_id'];
         $quantity  = $validated['quantity'] ?? 1;
+        $isGiftAddition = $request->input('_gift', false);
+        
+        // ── 1. Fetch Variant with Inventory ──
+        $variant = \App\Models\ProductVariant::with([
+            'product', 
+            'inventory', 
+            'images' => function($q) { $q->orderBy('sort_order'); }
+        ])->find($variantId);
 
-        $variantRow = DB::table('product_variants as pv')
-            ->join('products as p', 'pv.product_id', '=', 'p.product_id')
-            ->leftJoin('product_images as pi', 'pv.variant_id', '=', 'pi.variant_id')
-            ->select('pv.variant_id', 'p.product_id', 'p.product_name', 'pi.image_url')
-            ->where('pv.variant_id', $variantId)
-            ->orderBy('pi.sort_order')
-            ->first();
-
-        if (! $variantRow) {
-            if ($request->expectsJson()) {
-                return response()->json(['ok' => false, 'message' => 'Product not found.'], 404);
-            }
+        if (! $variant) {
+            if ($request->expectsJson()) return response()->json(['ok' => false, 'message' => 'Product not found.'], 404);
             return back()->with('error', 'Product not found.');
         }
 
-        $priceRow = VariantCurrencyPrice::where('variant_id', $variantId)
+        $inv = $variant->inventory;
+        $stock = $inv ? $inv->in_stock : 0; 
+
+        $priceRow = \App\Models\VariantCurrencyPrice::where('variant_id', $variantId)
             ->where('currency_code', $this->currency())
             ->first();
-
         $price = $priceRow?->price ?? 0;
 
         $cart = $this->getCart();
-
-        if ($request->expectsJson()) {
-            $foundIndex = null;
-
-            foreach ($cart as $idx => $line) {
-                if ($line['variant_id'] == $variantId) {
-                    $foundIndex = $idx;
-                    break;
-                }
+        
+        if (!$isGiftAddition) {
+            $giftOrders = session('gift_orders', []);
+            if (isset($giftOrders[$variantId])) {
+                unset($giftOrders[$variantId]);
+                session(['gift_orders' => $giftOrders]);
             }
-
-            if ($quantity <= 0) {
-                if ($foundIndex !== null) {
-                    unset($cart[$foundIndex]);
-                    $cart = array_values($cart);
-                }
-            } else {
-                if ($foundIndex !== null) {
-                    $cart[$foundIndex]['quantity'] = $quantity;
-                } else {
-                    $existingIds = array_column($cart, 'id');
-                    $newId = empty($existingIds) ? 1 : (max($existingIds) + 1);
-
-                    $cart[] = [
-                        'id'         => $newId,
-                        'variant_id' => $variantRow->variant_id,
-                        'product_id' => $variantRow->product_id,
-                        'name'       => $variantRow->product_name,
-                        'image'      => $variantRow->image_url ? ('images/' . $variantRow->image_url) : null,
-                        'price'      => $price,
-                        'quantity'   => $quantity,
-                        'currency'   => $this->currency(),
-                    ];
-                }
-            }
-
-            $this->saveCart($cart);
-
-            $cart = $this->repriceCart($cart);
-            [$total, $totalItems] = $this->computeTotals($cart);
-
-            return response()->json([
-                'ok' => true,
-                'total' => (float)$total,
-                'totalItems' => (int)$totalItems,
-            ]);
         }
 
-        $merged = false;
-        foreach ($cart as &$line) {
+        $foundIndex = null;
+        foreach ($cart as $idx => $line) {
             if ($line['variant_id'] == $variantId) {
-                $line['quantity'] += max(1, $quantity);
-                $merged = true;
+                $foundIndex = $idx;
                 break;
             }
         }
-        unset($line);
 
-        if (! $merged) {
-            $existingIds = array_column($cart, 'id');
-            $newId = empty($existingIds) ? 1 : (max($existingIds) + 1);
+        if ($quantity > $stock) {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'message' => "Only {$stock} items in stock."], 400);
+            }
+            return back()->with('error', "Cannot set quantity. Only {$stock} items in stock.");
+        }
 
-            $cart[] = [
-                'id'         => $newId,
-                'variant_id' => $variantRow->variant_id,
-                'product_id' => $variantRow->product_id,
-                'name'       => $variantRow->product_name,
-                'image'      => $variantRow->image_url ? ('images/' . $variantRow->variant_id) : null,
-                'price'      => $price,
-                'quantity'   => max(1, $quantity),
-                'currency'   => $this->currency(),
-            ];
+        if ($quantity <= 0) {
+            if ($foundIndex !== null) {
+                unset($cart[$foundIndex]);
+                $cart = array_values($cart);
+            }
+        } else {
+            if ($foundIndex !== null) {
+                $cart[$foundIndex]['quantity'] = $quantity;
+            } else {
+                $existingIds = array_column($cart, 'id');
+                $newId = empty($existingIds) ? 1 : (max($existingIds) + 1);
+                $firstImage = $variant->images->first();
+
+                $cart[] = [
+                    'id'         => $newId,
+                    'variant_id' => $variant->variant_id,
+                    'product_id' => $variant->product_id,
+                    'name'       => $variant->product->product_name ?? 'Unknown',
+                    'image'      => $firstImage ? ('images/' . $firstImage->image_url) : null,
+                    'price'      => $price,
+                    'quantity'   => $quantity,
+                    'currency'   => $this->currency(),
+                ];
+            }
         }
 
         $this->saveCart($cart);
+        $cart = $this->repriceCart($cart); 
+        [$total, $totalItems] = $this->computeTotals($cart);
 
-        return response()->json([
-            'ok' => true,
-            'totalItems' => (int)$totalItems,
-            'total' => (float)$total,
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'totalItems' => (int)$totalItems,
+                'total' => (float)$total,
+            ]);
+        }
+
+        return redirect()->route('cart.index')->with('success', 'Cart updated.');
     }
 
     public function update(Request $request, int $lineId)
@@ -228,10 +225,20 @@ class CartController extends Controller
         ]);
 
         $cart = $this->getCart();
+        $errorMsg = null;
 
         foreach ($cart as $idx => &$line) {
             if ($line['id'] == $lineId) {
                 $qty = $validated['quantity'];
+
+                // ── Fetch stock dynamically using find() and your accessor ──
+                $inv = \App\Models\Inventory::find($line['variant_id']);
+                $stock = $inv ? $inv->in_stock : 0;
+
+                if ($qty > $stock) {
+                    $qty = $stock; 
+                    $errorMsg = "Quantity adjusted. Only {$stock} items in stock.";
+                }
 
                 if ($qty <= 0) {
                     unset($cart[$idx]);
@@ -246,19 +253,33 @@ class CartController extends Controller
 
         $cart = array_values($cart);
         $this->saveCart($cart);
-        $cart = $this->repriceCart($cart);
+        $cart = $this->repriceCart($cart); 
 
         [$total, $totalItems] = $this->computeTotals($cart);
 
         if ($request->expectsJson()) {
-            return response()->json([
+            $updatedLine = collect($cart)->firstWhere('id', $lineId);
+            
+            $resp = [
                 'ok' => true,
                 'total' => $total,
                 'totalItems' => $totalItems,
-            ]);
+            ];
+
+            if ($errorMsg) $resp['message'] = $errorMsg;
+            if ($updatedLine) {
+                $resp['line_price'] = $updatedLine['price'];
+                $resp['line_total'] = $updatedLine['price'] * $updatedLine['quantity'];
+            }
+
+            return response()->json($resp, $errorMsg ? 400 : 200);
         }
 
-        return redirect()->route('cart.index');
+        if ($errorMsg) {
+            return redirect()->route('cart.index')->with('error', $errorMsg);
+        }
+
+        return redirect()->route('cart.index')->with('success', 'Basket updated.');
     }
 
     public function remove(int $lineId)
@@ -293,13 +314,13 @@ class CartController extends Controller
 
         $lines = array_map(function ($line) {
             return [
-                'id'       => $line['id'],
-                'name'     => $line['name'] ?? '',
+                'id'         => $line['id'],
+                'name'       => $line['name'] ?? '',
                 'variant_id' => $line['variant_id'],
-                'image'    => $line['image'] ?? null,
-                'price'    => (float)($line['price'] ?? 0),
-                'quantity' => (int)($line['quantity'] ?? 0),
-                'symbol'   => $line['symbol'] ?? '£',
+                'image'      => $line['image'] ?? null,
+                'price'      => (float)($line['price'] ?? 0),
+                'quantity'   => (int)($line['quantity'] ?? 0),
+                'symbol'     => $line['symbol'] ?? '£',
             ];
         }, $cart);
 
@@ -312,5 +333,4 @@ class CartController extends Controller
             'lines'      => $lines,
         ]);
     }
-
 }

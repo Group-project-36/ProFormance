@@ -1,4 +1,3 @@
-
 @extends('account.layout')
 
 @section('account-content')
@@ -40,14 +39,6 @@
                 </button>
             </div>
         </div>
-
-        @if(session('success'))
-            <div class="kb-account-alert kb-account-alert-success"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
-        @endif
-
-        @if($errors->any())
-            <div class="kb-account-alert kb-account-alert-error"><i class="bi bi-exclamation-circle"></i> @foreach($errors->all() as $error) <span>{{ $error }}</span> @endforeach</div>
-        @endif
 
         @if($wishlist->is_public && $shareUrl)
             <div class="kb-wishlist-share-info"><i class="bi bi-info-circle"></i> <span>Share link: <code>{{ $shareUrl }}</code></span></div>

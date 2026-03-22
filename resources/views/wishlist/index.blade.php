@@ -1,4 +1,3 @@
-
 @extends('account.layout')
 @section('account-content')
 <div class="kb-wishlist-page">
@@ -14,22 +13,6 @@
                 <i class="bi bi-plus-lg"></i> New Wishlist
             </button>
         </div>
-
-        @if(session('success'))
-            <div class="kb-account-alert kb-account-alert-success">
-                <i class="bi bi-check-circle"></i>
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if($errors->any())
-            <div class="kb-account-alert kb-account-alert-error">
-                <i class="bi bi-exclamation-circle"></i>
-                @foreach($errors->all() as $error)
-                    <span>{{ $error }}</span>
-                @endforeach
-            </div>
-        @endif
 
         {{-- CREATE WISHLIST FORM --}}
         <div id="create-wishlist-form" class="kb-wishlist-create-card" style="display:none;">

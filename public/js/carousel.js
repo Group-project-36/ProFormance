@@ -1,10 +1,3 @@
-/**
- * carousel.js
- *
- * Hero image slider (auto-advance, dots, prev/next)
- * and the "New Products" card carousel with swipe support.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // ══════════════════════════════════════

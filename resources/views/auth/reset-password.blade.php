@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/password-security.css') }}">
 
 <div class="auth-container" style="max-width: 480px;">
     <div class="auth-card">

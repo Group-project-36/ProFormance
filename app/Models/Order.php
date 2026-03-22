@@ -47,4 +47,15 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
     }
+
+    public function refunds()
+    {
+        return $this->hasMany(\App\Models\Refund::class, 'order_id', 'order_id');
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(\App\Models\Payment::class, 'order_id', 'order_id');
+    }
+
 }

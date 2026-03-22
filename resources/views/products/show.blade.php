@@ -24,18 +24,10 @@
         ══════════════════════════════════════════════ --}}
         <div class="kb-pdp-top">
 
-            {{-- ── Left: Image Gallery ── --}}
+            {{-- ── Left: Image Gallery (variant-filtered) ── --}}
             <div class="kb-pdp-gallery">
                 <div class="kb-pdp-thumbs" id="pdp-thumbs">
-                    @foreach($allImages as $i => $img)
-                        <button class="kb-pdp-thumb {{ $i === 0 ? 'active' : '' }}"
-                                data-index="{{ $i }}"
-                                data-variant="{{ $img['variant_id'] }}"
-                                onclick="setMainImage({{ $i }})">
-                            <img src="{{ asset('images/' . $img['url']) }}" alt="{{ $img['alt'] }}"
-                                 onerror="this.src='{{ asset('images/placeholders/product-placeholder.jpg') }}'">
-                        </button>
-                    @endforeach
+                    {{-- Thumbnails are rendered by JS based on selected variant --}}
                 </div>
 
                 <div class="kb-pdp-main-image" id="pdp-main-image">
@@ -57,7 +49,6 @@
 
                 <h1 class="kb-pdp-title">{{ $product->product_name }}</h1>
 
-                {{-- Rating summary (from existing reviews) --}}
                 @if($reviewStats['count'] > 0)
                     <a href="#reviews" class="kb-pdp-rating">
                         <span class="kb-pdp-stars">
@@ -140,10 +131,24 @@
                     </div>
                 @endif
 
+                {{-- ── Bulk Pricing (dynamic per variant) ── --}}
+                <div class="kb-bulk-pricing" id="bulk-pricing-section" style="{{ empty($defaultBulkTiers) ? 'display:none;' : '' }}">
+                    <div class="kb-bulk-header">
+                        <i class="bi bi-box-seam"></i>
+                        <span class="kb-bulk-title">Buy More, Save More</span>
+                    </div>
+                    <div class="kb-bulk-tiers" id="bulk-tiers">
+                        @foreach($defaultBulkTiers as $tier)
+                        <div class="kb-bulk-tier">
+                            <span class="kb-bulk-tier-qty">{{ $tier['min_quantity'] }}+</span>
+                            <span class="kb-bulk-tier-price">{{ $symbol ?? '£' }}{{ number_format($tier['price'], 2) }} each</span>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
                 {{-- ── Add to Cart / Notify Me / Wishlist ── --}}
                 <div class="kb-pdp-actions" id="pdp-actions">
-
-                    {{-- Add to Cart (shown when in stock) --}}
                     <form method="POST" action="{{ route('cart.add') }}" class="kb-pdp-cart-form" id="pdp-cart-form"
                           style="{{ $defaultStock <= 0 ? 'display:none;' : '' }}">
                         @csrf
@@ -166,7 +171,6 @@
                         </button>
                     </form>
 
-                    {{-- Wishlist button (existing) --}}
                     @if($defaultVariant)
                         <button type="button"
                                 class="kb-wishlist-btn {{ $inWishlist ? 'kb-wishlisted' : '' }}"
@@ -179,7 +183,6 @@
                         </button>
                     @endif
 
-                    {{-- Notify Me (shown when out of stock) --}}
                     <div class="kb-pdp-notify" id="pdp-notify-block"
                          style="{{ $defaultStock > 0 ? 'display:none;' : '' }}">
                         <p class="kb-pdp-notify-text">
@@ -202,14 +205,12 @@
                     </div>
                 </div>
 
-                {{-- Short Description --}}
                 @if(!empty($product->short_description))
                     <div class="kb-pdp-short-desc">
                         <p>{{ $product->short_description }}</p>
                     </div>
                 @endif
 
-                {{-- SKU / Category --}}
                 <div class="kb-pdp-meta">
                     @if($defaultVariant)
                         <span>SKU: <strong id="pdp-sku">{{ $defaultVariant->sku }}</strong></span>
@@ -236,7 +237,7 @@
 
             <div class="kb-pdp-tab-content active" id="tab-description">
                 <div class="kb-pdp-description">
-                    {!! nl2br(e($product->description)) !!}
+                    {!! nl2br(e($product->product_description)) !!}
                 </div>
             </div>
 
@@ -245,9 +246,7 @@
                     @foreach($specifications as $group => $specs)
                         <table class="kb-pdp-specs-table">
                             @if($group)
-                                <thead>
-                                    <tr><th colspan="2">{{ $group }}</th></tr>
-                                </thead>
+                                <thead><tr><th colspan="2">{{ $group }}</th></tr></thead>
                             @endif
                             <tbody>
                                 @foreach($specs as $spec)
@@ -264,10 +263,72 @@
         </div>
 
         {{-- ══════════════════════════════════════════════
-             REVIEWS SECTION (existing, unchanged)
+             RELATED PRODUCTS CAROUSEL
+        ══════════════════════════════════════════════ --}}
+        @if(isset($relatedProducts) && $relatedProducts->isNotEmpty())
+        <section class="kb-related-products">
+            <div class="kb-related-header">
+                <h2 class="kb-related-title">You Might Also Like</h2>
+                <div class="kb-related-nav">
+                    <button class="kb-related-nav-btn" onclick="relatedScroll(-1)" aria-label="Previous"><i class="bi bi-chevron-left"></i></button>
+                    <button class="kb-related-nav-btn" onclick="relatedScroll(1)" aria-label="Next"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="kb-related-carousel" id="related-carousel">
+                @foreach($relatedProducts as $rp)
+                <a href="{{ route('products.show', $rp['product_id']) }}" class="kb-related-card">
+                    <div class="kb-related-img-wrap">
+                        <img src="{{ asset('images/' . $rp['image']) }}"
+                             alt="{{ $rp['product_name'] }}"
+                             class="kb-related-img"
+                             loading="lazy"
+                             onerror="this.src='{{ asset('images/placeholders/product-placeholder.jpg') }}'">
+                    </div>
+                    <div class="kb-related-info">
+                        @if($rp['brand_name'])
+                            <span class="kb-related-brand">{{ $rp['brand_name'] }}</span>
+                        @endif
+                        <span class="kb-related-name">{{ $rp['product_name'] }}</span>
+                        <div class="kb-related-pricing">
+                            @if($rp['price'])
+                                <span class="kb-related-price">{{ $rp['symbol'] }}{{ number_format($rp['price'], 2) }}</span>
+                                @if($rp['was_price'])
+                                    <span class="kb-related-was-price">{{ $rp['symbol'] }}{{ number_format($rp['was_price'], 2) }}</span>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+        {{-- ══════════════════════════════════════════════
+             REVIEWS SECTION
         ══════════════════════════════════════════════ --}}
         <div class="kb-reviews-section" id="reviews">
-            <h2 class="kb-reviews-title">Customer Reviews</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="kb-reviews-title" style="margin: 0;">Customer Reviews</h2>
+                
+                @if($reviews->isNotEmpty())
+                    <form method="GET" action="{{ url()->current() }}#reviews" id="review-sort-form" style="margin: 0;">
+                        @foreach(request()->except('review_sort') as $key => $value)
+                            @if(!is_array($value))
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        
+                        <select name="review_sort" onchange="this.form.submit()" class="kb-form-input" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.9rem; cursor: pointer; background-color: #f9fafb;">
+                            <option value="newest" {{ request('review_sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
+                            <option value="oldest" {{ request('review_sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                            <option value="highest_rating" {{ request('review_sort') == 'highest_rating' ? 'selected' : '' }}>Highest Rating</option>
+                            <option value="lowest_rating" {{ request('review_sort') == 'lowest_rating' ? 'selected' : '' }}>Lowest Rating</option>
+                            <option value="most_helpful" {{ request('review_sort') == 'most_helpful' ? 'selected' : '' }}>Most Helpful</option>
+                        </select>
+                    </form>
+                @endif
+            </div>
 
             @if($reviewStats['count'] > 0)
                 <div class="kb-reviews-overview">
@@ -309,20 +370,18 @@
                 @if(!$userReview)
                     <div class="kb-review-form-card">
                         <h3>Write a Review</h3>
-
                         @if($errors->has('review'))
                             <div class="kb-form-error" style="margin-bottom: 1rem;">{{ $errors->first('review') }}</div>
                         @endif
-
-                        <form method="POST" action="{{ route('reviews.store', $product->product_id) }}">
+                        <form method="POST" action="{{ route('reviews.store', $product->product_id) }}" enctype="multipart/form-data">
                             @csrf
-
+                            
                             <div class="kb-form-group">
                                 <label class="kb-form-label">Your Rating</label>
                                 <div class="kb-star-rating-input">
                                     @for($i = 5; $i >= 1; $i--)
                                         <input type="radio" name="rating" value="{{ $i }}" id="star-{{ $i }}"
-                                               {{ old('rating') == $i ? 'checked' : '' }}>
+                                            {{ old('rating') == $i ? 'checked' : '' }}>
                                         <label for="star-{{ $i }}" title="{{ $i }} stars">
                                             <i class="bi bi-star-fill"></i>
                                         </label>
@@ -330,22 +389,29 @@
                                 </div>
                                 @error('rating') <div class="kb-form-error">{{ $message }}</div> @enderror
                             </div>
-
+                            
                             <div class="kb-form-group">
                                 <label class="kb-form-label">Title <span class="kb-form-optional">(optional)</span></label>
                                 <input type="text" name="title" class="kb-form-input"
-                                       value="{{ old('title') }}" placeholder="Summarise your experience">
+                                    value="{{ old('title') }}" placeholder="Summarise your experience">
                             </div>
-
+                            
                             <div class="kb-form-group">
                                 <label class="kb-form-label">Your Review</label>
                                 <textarea name="body" class="kb-form-input kb-form-textarea" rows="4"
-                                          placeholder="What did you like or dislike?">{{ old('body') }}</textarea>
+                                        placeholder="What did you like or dislike?">{{ old('body') }}</textarea>
+                            </div>
+
+                            {{-- NEW: Image Upload Field --}}
+                            <div class="kb-form-group">
+                                <label class="kb-form-label">Add Images <span class="kb-form-optional">(optional)</span></label>
+                                <input type="file" name="images[]" multiple accept="image/jpeg, image/png, image/webp" class="kb-form-input" style="padding: 8px; background: #fff;">
+                                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px;">You can select multiple images. Max 2MB per image (JPG, PNG, WEBP).</div>
+                                @error('images.*') <div class="kb-form-error">{{ $message }}</div> @enderror
                             </div>
 
                             <button type="submit" class="kb-account-btn kb-account-btn-primary">Submit Review</button>
                         </form>
-                    </div>
                 @else
                     <div class="kb-review-already">
                         <i class="bi bi-check-circle"></i>
@@ -361,28 +427,66 @@
             @if($reviews->isNotEmpty())
                 <div class="kb-reviews-list">
                     @foreach($reviews as $review)
-                        <div class="kb-review-card">
-                            <div class="kb-review-card-header">
-                                <div class="kb-review-card-user">
-                                    <i class="bi bi-person-circle"></i>
-                                    <span class="kb-review-card-name">{{ $review->user->first_name ?? 'Anonymous' }} {{ substr($review->user->last_name ?? '', 0, 1) }}.</span>
+                        <div class="kb-review-card" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
+                            <div class="kb-review-card-header" style="display:flex; justify-content:space-between; margin-bottom: 10px;">
+                                <div class="kb-review-card-user" style="display:flex; align-items:center;">
+                                    <i class="bi bi-person-circle" style="margin-right: 8px; color: #6b7280;"></i>
+                                    <span class="kb-review-card-name" style="font-weight: 600;">{{ $review->user->first_name ?? 'Anonymous' }}</span>
+                                    @if($review->is_verified_purchase)
+                                        <span class="kb-badge-success" style="font-size:0.75rem; color:#10b981; margin-left:8px; display:flex; align-items:center; gap:3px;">
+                                            <i class="bi bi-patch-check-fill"></i> Verified Purchase
+                                        </span>
+                                    @endif
                                 </div>
-                                <span class="kb-review-card-date">{{ $review->created_at->format('d M Y') }}</span>
+                                <span class="kb-review-card-date" style="font-size:0.85rem; color:#6b7280;">{{ $review->created_at->format('d M Y') }}</span>
                             </div>
 
-                            <div class="kb-stars-display kb-stars-sm">
+                            <div class="kb-stars-display kb-stars-sm" style="color: var(--kb-amber-500); margin-bottom: 10px;">
                                 @for($i = 1; $i <= 5; $i++)
                                     <i class="bi {{ $i <= $review->rating ? 'bi-star-fill' : 'bi-star' }}"></i>
                                 @endfor
                             </div>
 
-                            @if($review->title)
-                                <h4 class="kb-review-card-title">{{ $review->title }}</h4>
+                            @if($review->title) 
+                                <h4 class="kb-review-card-title" style="margin: 0 0 8px 0; font-size: 1.05rem;">{{ $review->title }}</h4> 
+                            @endif
+                            
+                            @if($review->body) 
+                                <p class="kb-review-card-body">{{ $review->body }}</p> 
                             @endif
 
-                            @if($review->body)
-                                <p class="kb-review-card-body">{{ $review->body }}</p>
+                            @if($review->images && $review->images->count() > 0)
+                                <div class="kb-review-images" style="display:flex; gap:10px; margin-bottom:15px;">
+                                    @foreach($review->images as $img)
+                                        <a href="{{ asset('images/' . $img->image_path) }}" target="_blank">
+                                            <img src="{{ asset('images/' . $img->image_path) }}" style="width:80px; height:80px; object-fit:cover; border-radius:4px; border: 1px solid #e5e7eb;">
+                                        </a>
+                                    @endforeach
+                                </div>
                             @endif
+
+                            @if($review->admin_reply)
+                                <div class="kb-review-admin-reply" style="background: #f8fafc; border-left: 3px solid var(--kb-primary); padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+                                    <strong style="font-size: 0.9rem; color: #1f2937;">Response from ProFormance:</strong>
+                                    <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #4b5563;">{{ $review->admin_reply }}</p>
+                                </div>
+                            @endif
+
+                            <div class="kb-review-actions" style="font-size:0.85rem; display:flex; gap:15px; align-items:center; padding-top: 10px;">
+                                @php $helpfulCount = $review->helpfulVotes->count(); @endphp
+                                <button type="button" 
+        								class="btn-helpful" 
+        								data-review-id="{{ $review->review_id }}"
+       									data-url="{{ route('reviews.helpful', ['review' => $review->review_id]) }}" 
+        								style="background:none; border:none; color:var(--kb-primary); cursor:pointer; padding: 0;">
+    								<i class="bi bi-hand-thumbs-up{{ $review->user_vote ? '-fill' : '' }}"></i> Helpful (<span class="helpful-count">{{ $helpfulCount }}</span>)
+								</button>
+                                <span style="color:#6b7280;">{{ $helpfulCount }} people found this helpful.</span>
+                                
+                                <button type="button" onclick="openReportModal({{ $review->review_id }})" style="margin-left:auto; background:none; border:none; color:#dc2626; cursor:pointer; padding: 0;">
+                                    <i class="bi bi-flag"></i> Report
+                                </button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -396,16 +500,46 @@
 
     </div>
 </div>
-
+<div id="reportReviewModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div class="kb-report-background" style="padding:24px; border-radius:8px; width:100%; max-width:400px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 class="kb-report-background-h3" style="margin:0; font-size:1.2rem;">Report Review</h3>
+            <button type="button" onclick="closeReportModal()" style="background:none; border:none; font-size:1.5rem; color:#6b7280; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+        
+        <form id="reportReviewForm" method="POST" action="">
+            @csrf
+            <div style="margin-bottom:20px;">
+                <label style="display:block; margin-bottom:8px; font-size:0.9rem; color:#374151;">Why are you reporting this review?</label>
+                <select name="reason" required class="kb-form-input" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;">
+                    <option value="" disabled selected>Select a reason...</option>
+                    <option value="spam">Spam or Promotional</option>
+                    <option value="inappropriate">Offensive or Inappropriate</option>
+                    <option value="unrelated">Unrelated to the Product</option>
+                    <option value="fake">Fake or Paid Review</option>
+                </select>
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeReportModal()" style="padding:8px 16px; border:1px solid #d1d5db; border-radius:6px; cursor:pointer; background:#fff; color:#374151; font-weight:500;">Cancel</button>
+                <button type="submit" style="padding:8px 16px; background:#dc2626; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:500;">Submit Report</button>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
-// ── Variant data from server ──
+// ── Data from server ──
 const variants    = @json($variantsJson);
 const allImages   = @json($allImages);
+const bulkTiers   = @json($bulkTiers ?? []);
 const symbol      = '{{ $symbol }}';
+const imgBase     = '{{ asset("images") }}/';
+const placeholder = '{{ asset("images/placeholders/product-placeholder.jpg") }}';
 let   currentImg  = 0;
 let   selectedOpts = {};
+let   currentVariantId = {{ $defaultVariant->variant_id ?? 'null' }};
 
-// Initialise with first option of each attribute
+// Init selected options
 document.querySelectorAll('.kb-pdp-variant-group').forEach(group => {
     const firstBtn = group.querySelector('.kb-pdp-opt.active');
     if (firstBtn) {
@@ -413,14 +547,64 @@ document.querySelectorAll('.kb-pdp-variant-group').forEach(group => {
     }
 });
 
-// ── Image Gallery ──
-function setMainImage(index) {
-    currentImg = index;
-    const img = allImages[index];
-    document.getElementById('pdp-main-img').src = '{{ asset("images") }}/' + img.url;
-    document.getElementById('pdp-main-img').alt = img.alt;
-    document.querySelectorAll('.kb-pdp-thumb').forEach((t, i) => {
-        t.classList.toggle('active', i === index);
+// ── Gallery: render thumbnails for a variant ──
+function renderGallery(variantId) {
+    const thumbsEl = document.getElementById('pdp-thumbs');
+    const mainImg  = document.getElementById('pdp-main-img');
+
+    // Filter images for this variant
+    let imgs = allImages.filter(img => img.variant_id === variantId);
+
+    // Fallback: if variant has no images, show all
+    if (imgs.length === 0) {
+        imgs = allImages;
+    }
+
+    // Render thumbnails
+    thumbsEl.innerHTML = '';
+    imgs.forEach((img, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'kb-pdp-thumb' + (i === 0 ? ' active' : '');
+        btn.onclick = () => {
+            mainImg.src = imgBase + img.url;
+            mainImg.alt = img.alt;
+            thumbsEl.querySelectorAll('.kb-pdp-thumb').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        };
+        const thumbImg = document.createElement('img');
+        thumbImg.src = imgBase + img.url;
+        thumbImg.alt = img.alt;
+        thumbImg.onerror = function() { this.src = placeholder; };
+        btn.appendChild(thumbImg);
+        thumbsEl.appendChild(btn);
+    });
+
+    // Set main image to first of this variant
+    if (imgs.length > 0) {
+        mainImg.src = imgBase + imgs[0].url;
+        mainImg.alt = imgs[0].alt;
+    }
+}
+
+// ── Bulk Pricing: render tiers for a variant ──
+function renderBulkTiers(variantId) {
+    const section = document.getElementById('bulk-pricing-section');
+    const container = document.getElementById('bulk-tiers');
+    const tiers = bulkTiers[variantId] || [];
+
+    if (tiers.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = '';
+    container.innerHTML = '';
+    tiers.forEach(tier => {
+        const div = document.createElement('div');
+        div.className = 'kb-bulk-tier';
+        div.innerHTML = `<span class="kb-bulk-tier-qty">${tier.min_quantity}+</span>` +
+                         `<span class="kb-bulk-tier-price">${symbol}${tier.price.toFixed(2)} each</span>`;
+        container.appendChild(div);
     });
 }
 
@@ -461,17 +645,16 @@ function findVariant() {
 }
 
 function updateProductForVariant(v) {
+    currentVariantId = v.id;
     document.getElementById('pdp-variant-id').value = v.id;
     document.getElementById('pdp-notify-variant-id').value = v.id;
 
-    // Update wishlist button variant id
     const wlBtn = document.getElementById('pdp-wishlist-btn');
     if (wlBtn) wlBtn.dataset.variantId = v.id;
 
     // Price
     if (v.price !== null) {
         document.getElementById('pdp-price-now').textContent = symbol + v.price.toFixed(2);
-
         const wasEl = document.getElementById('pdp-price-was');
         const saveEl = document.getElementById('pdp-savings');
 
@@ -509,11 +692,11 @@ function updateProductForVariant(v) {
     const skuEl = document.getElementById('pdp-sku');
     if (skuEl) skuEl.textContent = v.sku;
 
-    // Swap to this variant's images
-    if (v.images && v.images.length > 0) {
-        const firstIdx = allImages.findIndex(img => img.variant_id === v.id);
-        if (firstIdx >= 0) setMainImage(firstIdx);
-    }
+    // Gallery — show only this variant's images
+    renderGallery(v.id);
+
+    // Bulk pricing — show this variant's tiers
+    renderBulkTiers(v.id);
 }
 
 // ── Quantity ──
@@ -528,6 +711,15 @@ function switchTab(btn) {
     document.querySelectorAll('.kb-pdp-tab-content').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+}
+
+// ── Related Products Carousel ──
+function relatedScroll(dir) {
+    const el = document.getElementById('related-carousel');
+    if (!el) return;
+    const card = el.querySelector('.kb-related-card');
+    const scrollAmt = card ? (card.offsetWidth + 16) * 2 : 300;
+    el.scrollBy({ left: dir * scrollAmt, behavior: 'smooth' });
 }
 
 // ── Notify Me (AJAX) ──
@@ -552,7 +744,7 @@ document.getElementById('pdp-notify-form')?.addEventListener('submit', function(
     .catch(() => alert('Could not submit. Please try again.'));
 });
 
-// ── Wishlist toggle (existing) ──
+// ── Wishlist toggle ──
 function toggleWishlist(btn) {
     const variantId = btn.dataset.variantId;
     const icon = btn.querySelector('i');
@@ -585,5 +777,36 @@ function toggleWishlist(btn) {
     })
     .catch(err => console.error('Wishlist error:', err));
 }
+
+// ── Init: render gallery for default variant ──
+if (currentVariantId) {
+    renderGallery(currentVariantId);
+}
+
+// ── Report Modal Logic ──
+function openReportModal(reviewId) {
+    const modal = document.getElementById('reportReviewModal');
+    const form = document.getElementById('reportReviewForm');
+    
+    // Set the dynamic action URL for the form based on the review ID
+    form.action = `/reviews/${reviewId}/report`;
+    
+    // Show the modal
+    modal.style.display = 'flex';
+}
+
+function closeReportModal() {
+    document.getElementById('reportReviewModal').style.display = 'none';
+}
+
+// Close modal if user clicks on the dark background outside of it
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('reportReviewModal');
+    if (event.target === modal) {
+        closeReportModal();
+    }
+});
+
+window.loginUrl = "{{ route('login') }}";
 </script>
 @endsection

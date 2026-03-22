@@ -1,16 +1,3 @@
-/**
- * wishlist.js
- *
- * Wishlist heart-toggle for product cards and the product detail page.
- * Calls the server-side toggle endpoint via AJAX.
- *
- * Usage: <button onclick="toggleWishlistCard(this)" data-variant-id="123">
- *
- * Note: The product detail page has its own toggleWishlist() in show.blade.php
- * which handles the extra "In Wishlist" text label. This file covers the
- * product card hearts on the listing/home pages.
- */
-
 function toggleWishlistCard(btn) {
     const variantId = btn.dataset.variantId;
     const icon      = btn.querySelector('i');

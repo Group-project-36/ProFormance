@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LoginDetail;
+use Illuminate\Support\Facades\Hash;    
 
 class AccountSecurityController extends Controller
 {
@@ -24,22 +25,15 @@ class AccountSecurityController extends Controller
         $user = Auth::user();
         $loginDetail = LoginDetail::where('user_id', $user->user_id)->firstOrFail();
 
-        // Verify current password
-        $currentHash = hash('sha256', $request->current_password . $loginDetail->password_salt);
-
-        if ($currentHash !== $loginDetail->password_hash) {
+        if (!Hash::check($request->current_password, $loginDetail->password_hash)) {
             return back()->withErrors([
                 'current_password' => 'Current password is incorrect.',
             ]);
         }
 
-        // Generate new salt and hash
-        $newSalt = bin2hex(random_bytes(16));
-        $newHash = hash('sha256', $request->new_password . $newSalt);
-
         $loginDetail->update([
-            'password_hash' => $newHash,
-            'password_salt' => $newSalt,
+            'password_hash' => Hash::make($request->new_password),
+            'password_salt' => '', // or '' if your DB column is NOT NULL
         ]);
 
         return redirect()->route('account.security')
@@ -57,8 +51,7 @@ class AccountSecurityController extends Controller
         $loginDetail = LoginDetail::where('user_id', $user->user_id)->firstOrFail();
 
         // Verify password
-        $currentHash = hash('sha256', $request->current_password . $loginDetail->password_salt);
-        if ($currentHash !== $loginDetail->password_hash) {
+        if (!Hash::check($request->current_password, $loginDetail->password_hash)) {
             return back()->withErrors([
                 'current_password' => 'Password is incorrect.',
             ]);
@@ -90,8 +83,7 @@ class AccountSecurityController extends Controller
         $user = Auth::user();
         $loginDetail = LoginDetail::where('user_id', $user->user_id)->firstOrFail();
 
-        $currentHash = hash('sha256', $request->current_password . $loginDetail->password_salt);
-        if ($currentHash !== $loginDetail->password_hash) {
+        if (!Hash::check($request->current_password, $loginDetail->password_hash)) {
             return back()->withErrors(['current_password' => 'Password is incorrect.']);
         }
 

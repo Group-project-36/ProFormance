@@ -259,8 +259,9 @@ class WishlistController extends Controller
             return back()->withErrors(['gift' => 'The wishlist owner has not set a delivery address.']);
         }
 
-        $giftData = session('gift_orders', []);
-        $giftData[$request->variant_id] = [
+        // ── Store gift address in session ──
+        $giftData = session()->get('gift_orders', []);
+        $giftData[(string) $request->variant_id] = [
             'wishlist_id'         => $wishlist->wishlist_id,
             'wishlist_owner_name' => $wishlist->user->first_name,
             'address_id'          => $address->address_id,
@@ -274,20 +275,75 @@ class WishlistController extends Controller
             'country_code'        => $address->country_code,
             'phone_number'        => $address->phone_number,
         ];
-        session(['gift_orders' => $giftData]);
+        session()->put('gift_orders', $giftData);
 
-        app(\App\Http\Controllers\CartController::class)->add(
-            new \Illuminate\Http\Request([
-                'variant_id' => $request->variant_id,
+        // ── Add to cart directly (no synthetic Request) ──
+        $variantId = (int) $request->variant_id;
+        $variant = \App\Models\ProductVariant::with([
+            'product',
+            'inventory',
+            'images' => fn($q) => $q->orderBy('sort_order'),
+        ])->find($variantId);
+
+        if (!$variant) {
+            return back()->with('error', 'Product not found.');
+        }
+
+        // Stock check
+        $stock = $variant->inventory ? $variant->inventory->in_stock : 0;
+        if ($stock <= 0) {
+            return back()->with('error', 'Sorry, this item is currently out of stock.');
+        }
+
+        // Get price
+        $currency = session('currency', 'gbp');
+        $priceRow = \App\Models\VariantCurrencyPrice::where('variant_id', $variantId)
+            ->where('currency_code', $currency)
+            ->first();
+        $price = $priceRow?->price ?? 0;
+        $symbol = \App\Models\Currency::where('currency_code', strtoupper($currency))->first()?->symbol ?? '£';
+
+        // Read cart, check if item already exists
+        $cart = session('cart', []);
+        $foundIndex = null;
+        foreach ($cart as $idx => $line) {
+            if (($line['variant_id'] ?? null) == $variantId) {
+                $foundIndex = $idx;
+                break;
+            }
+        }
+
+        if ($foundIndex !== null) {
+            // Already in cart — increment by 1
+            $newQty = $cart[$foundIndex]['quantity'] + 1;
+            if ($newQty > $stock) {
+                return back()->with('error', "Only {$stock} items available.");
+            }
+            $cart[$foundIndex]['quantity'] = $newQty;
+        } else {
+            // New item
+            $existingIds = array_column($cart, 'id');
+            $newId = empty($existingIds) ? 1 : (max($existingIds) + 1);
+            $firstImage = $variant->images->first();
+
+            $cart[] = [
+                'id'         => $newId,
+                'variant_id' => $variant->variant_id,
+                'product_id' => $variant->product_id,
+                'name'       => $variant->product->product_name ?? 'Unknown',
+                'image'      => $firstImage ? ('images/' . $firstImage->image_url) : null,
+                'price'      => $price,
                 'quantity'   => 1,
-            ])
-        );
+                'currency'   => $currency,
+                'symbol'     => $symbol,
+            ];
+        }
 
+        session()->put('cart', $cart);
+        session()->save();
         return redirect()->route('cart.index')
             ->with('success', 'Gift item added to basket! It will be delivered to ' . $wishlist->user->first_name . '.');
     }
-
-
     private function resolveWishlist(?int $wishlistId = null): Wishlist
     {
         $user = Auth::user();
@@ -314,5 +370,74 @@ class WishlistController extends Controller
         }
 
         return $wishlist;
+    }
+
+    /**
+     * AJAX: Return the user's wishlists for the picker modal.
+     */
+    public function picker(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Please sign in'], 401);
+        }
+
+        $variantId = $request->input('variant_id');
+
+        $wishlists = Wishlist::where('user_id', Auth::user()->user_id)
+            ->withCount('items')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($wl) use ($variantId) {
+                $containsItem = false;
+                if ($variantId) {
+                    $containsItem = WishlistItem::where('wishlists_id', $wl->wishlist_id)
+                        ->where('variant_id', $variantId)
+                        ->exists();
+                }
+
+                return [
+                    'id'            => $wl->wishlist_id,
+                    'name'          => $wl->wishlist_name,
+                    'items_count'   => $wl->items_count,
+                    'contains_item' => $containsItem,
+                ];
+            });
+
+        return response()->json([
+            'success'   => true,
+            'wishlists' => $wishlists,
+        ]);
+    }
+
+    /**
+     * AJAX: Create a new wishlist and return it.
+     */
+    public function quickCreate(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Please sign in'], 401);
+        }
+
+        $data = $request->validate([
+            'wishlist_name' => 'required|string|max:100',
+        ]);
+
+        $slug = Wishlist::generateUniqueSlug($data['wishlist_name']);
+
+        $wishlist = Wishlist::create([
+            'user_id'       => Auth::user()->user_id,
+            'wishlist_name' => $data['wishlist_name'],
+            'is_public'     => false,
+            'slug'          => $slug,
+        ]);
+
+        return response()->json([
+            'success'  => true,
+            'wishlist' => [
+                'id'          => $wishlist->wishlist_id,
+                'name'        => $wishlist->wishlist_name,
+                'items_count' => 0,
+            ],
+        ]);
     }
 }

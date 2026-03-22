@@ -89,6 +89,18 @@ class HomeController extends Controller
             $p->display_price_penny = (int) round($net * (1 + $vatRate));
             return $p;
         });
+
+        $featuredProducts = Product::where('is_active', true)
+            ->with(['brand', 'variants.prices', 'variants.images'])
+            ->inRandomOrder()
+            ->limit(8)
+            ->get();
+
+        $testimonials = Review::where('is_approved', true)
+            ->with(['user', 'product.brand'])
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get();
         
 
         return view('home', [
@@ -98,6 +110,7 @@ class HomeController extends Controller
             'bestPrice'    => $bestPrice,
             'vatLabel'     => $vatLabel,
             'vatRate'      => $vatRate,
+            'testimonials' => $testimonials,
         ]);
     }
 

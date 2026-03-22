@@ -1,15 +1,3 @@
-/**
- * card-validation.js
- *
- * Real-time card number validation on the checkout page:
- *  - Brand detection (Visa, Mastercard, Amex) with icon swap
- *  - Luhn algorithm check
- *  - Auto-formatting with spaces
- *  - Expiry date validation (MM/YY)
- *  - CVV length enforcement (3 or 4 for Amex)
- *  - Unsupported brand warning
- */
-
 document.addEventListener('DOMContentLoaded', () => {
     const elNumber = document.getElementById('card_number');
     const elExpiry = document.getElementById('card_expiry');

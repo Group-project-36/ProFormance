@@ -1,4 +1,3 @@
-
 @extends('account.layout')
 
 @section('content')
@@ -12,10 +11,6 @@
                 <p class="kb-wishlist-subtitle">{{ $items->count() }} {{ $items->count() === 1 ? 'item' : 'items' }}</p>
             </div>
         </div>
-
-        @if(session('success'))
-            <div class="kb-account-alert kb-account-alert-success"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
-        @endif
 
         @if($canGift)
             <div class="kb-wishlist-gift-banner">

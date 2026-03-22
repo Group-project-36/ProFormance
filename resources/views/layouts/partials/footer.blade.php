@@ -2,11 +2,7 @@
     <div class="kb-footer-inner">
         <div class="kb-footer-col kb-footer-brand">
             <a href="{{ route('home') }}" class="kb-footer-logo">
-                <img
-                    src="{{ asset('images/logo.png') }}"
-                    alt="ProFormance logo"
-                    class="kb-footer-logo-img"
-                >
+                <img src="{{ asset('images/logo.png') }}" alt="ProFormance logo" class="kb-footer-logo-img">
                 <span class="kb-footer-logo-text">ProFormance</span>
             </a>
 
@@ -14,27 +10,6 @@
                 Performance-driven gym wear, nutrition, and gear to help you train smarter
                 and feel stronger every day.
             </p>
-
-            <!-- <form class="kb-footer-newsletter" method="POST" action="#">
-                @csrf
-                <label for="footer-email" class="kb-footer-newsletter-label">
-                    Subscribe to our newsletter
-                </label>
-                <div class="kb-footer-newsletter-row">
-                    <input
-                        type="email"
-                        id="footer-email"
-                        name="email"
-                        placeholder="Enter your email"
-                        class="kb-footer-newsletter-input"
-                        required
-                    >
-                    <button type="submit" class="kb-footer-newsletter-btn">
-                        Subscribe
-                    </button>
-                </div>
-                
-            </form> -->
 
             <form method="POST" action="{{ route('newsletter.subscribe') }}" class="kb-footer-newsletter">
                 @csrf
@@ -48,7 +23,6 @@
                 </p>
             </form>
 
-
             <div class="kb-footer-social">
                 <a href="#" aria-label="Instagram">
                     <i class="bi bi-instagram"></i>
@@ -61,7 +35,6 @@
                 </a>
             </div>
         </div>
-
 
         <div class="kb-footer-col">
             <h4 class="kb-footer-heading">Shop</h4>
@@ -78,42 +51,41 @@
         <div class="kb-footer-col">
             <h4 class="kb-footer-heading">Help</h4>
             <ul class="kb-footer-links">
-                <li><a href="{{ route('help.shipping') }}">Shipping &amp; delivery</a></li>
-                <li><a href="{{ route('help.returns') }}">Returns &amp; refunds</a></li>
-                <li><a href="{{ route('help.size_guide') }}">Size guide</a></li>
+                <li><a href="{{ route('shipping') }}">Shipping &amp; delivery</a></li>
+                <li><a href="{{ route('returns') }}">Returns &amp; refunds</a></li>
+                <li><a href="{{ route('size-guide') }}">Size guide</a></li>
                 <li><a href="{{ route('contact') }}">Contact us</a></li>
-                <li><a href="{{ route('help.faq') }}">FAQ</a></li>
-                <li><a href="{{ route('help.gift_cards') }}">Gift cards</a></li>
-                <li><a href="{{ route('help.student_discount') }}">Student discount</a></li>
-                <li><a href="{{ route('help.teacher_discount') }}">Teacher discount</a></li>
-                <li><a href="{{ route('help.first_responder_discount') }}">First responder discount</a></li>
+                <li><a href="{{ route('faq') }}">FAQ</a></li>
+                <li><a href="{{ route('gift-cards') }}">Gift cards</a></li>
+                <li><a href="{{ route('discounts') }}">Student discount</a></li>
+                <li><a href="{{ route('discounts') }}">Teacher discount</a></li>
+                <li><a href="{{ route('discounts') }}">First responder discount</a></li>
             </ul>
         </div>
 
         <div class="kb-footer-col">
             <h4 class="kb-footer-heading">About</h4>
             <ul class="kb-footer-links">
-                <li><a href="{{ route('about') }}" class="kb-nav-link">About us</a></li>
-                <li><a href="{{ route('about.sustainability') }}">Sustainability</a></li>
-                <li><a href="{{ route('about.careers') }}">Careers</a></li>
-                <li><a href="{{ route('about.affiliates') }}">Affiliates</a></li>
+                <li><a href="{{ route('about') }}">About us</a></li>
+                <li><a href="{{ route('sustainability') }}">Sustainability</a></li>
+                <li><a href="{{ route('careers') }}">Careers</a></li>
+                <li><a href="{{ route('affiliates') }}">Affiliates</a></li>
             </ul>
         </div>
-    </div>
+    </div> {{-- Close kb-footer-inner --}}
 
     <div class="kb-footer-bottom">
         <p class="kb-footer-copy">
             &copy; {{ date('Y') }} ProFormance. All rights reserved.
         </p>
-
         <div class="kb-footer-bottom-links">
-            <a href="{{ route('legal.privacy') }}">Privacy policy</a>
+            <a href="{{ route('privacy') }}">Privacy policy</a>
             <span class="kb-footer-separator">•</span>
-            <a href="{{ route('legal.gdpr') }}">GDPR &amp; data protection</a>
+            <a href="{{ route('gdpr') }}">GDPR &amp; data protection</a>
             <span class="kb-footer-separator">•</span>
-            <a href="{{ route('legal.terms') }}">Terms &amp; conditions</a>
+            <a href="{{ route('terms') }}">Terms &amp; conditions</a>
             <span class="kb-footer-separator">•</span>
-            <a href="{{ route('legal.cookies') }}">Cookies</a>
+            <a href="{{ route('cookies') }}">Cookies</a>
         </div>
     </div>
 
@@ -121,11 +93,8 @@
         <div class="kb-payment-section">
             <div class="kb-payment-icons">
                 <x-icon name="amex" />
-                <x-icon name="applepay" />
-                <x-icon name="googlepay" />
                 <x-icon name="mastercard" />
                 <x-icon name="paypal" />
-                <x-icon name="samsungpay" />
                 <x-icon name="visa" />
             </div>
         </div>

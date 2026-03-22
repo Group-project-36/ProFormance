@@ -1,12 +1,3 @@
-/**
- * cart.js
- *
- * Everything cart-related:
- *  - Product listing add/+/- controls (cart-control widgets)
- *  - Cart page quantity editing (js-qty-input)
- *  - Cart sidebar preview (hover prefetch + render)
- */
-
 document.addEventListener('DOMContentLoaded', () => {
 
     const csrfToken  = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -264,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewItems      = document.getElementById('preview-items');
     const previewTotalItems = document.getElementById('preview-total-items');
     const previewTotalPrice = document.getElementById('preview-total-price');
-    const container         = document.querySelector('.kb-cart-container-button');
+    const container = document.querySelector('.kb-cart-hover');
 
     if (previewItems && container) {
         const CACHE_MS = 15000;
@@ -283,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cartCountEl) cartCountEl.textContent = data.totalItems || 0;
 
             if (!lines.length) {
-                previewItems.innerHTML = '<div style="padding:10px 0;color:#666;font-size:14px;">Your cart is empty.</div>';
+                previewItems.innerHTML = '<div style="padding:10px 0;color:#fec89A;font-size:14px;">Your cart is empty.</div>';
                 return;
             }
 

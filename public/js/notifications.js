@@ -1,10 +1,3 @@
-/**
- * notifications.js
- *
- * Global toast (top of screen) and notification (bottom of screen) system.
- * Loaded early — other scripts depend on Toast.show() and Notification.show().
- */
-
 const Toast = {
     show(message, type = 'info') {
         const existing = document.querySelector('.kb-toast');

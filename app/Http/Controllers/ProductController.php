@@ -7,6 +7,7 @@ use App\Models\ProductVariant;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\Review;
+use App\Models\ReviewHelpful;
 use App\Models\Wishlist;
 use App\Models\WishlistItem;
 use Illuminate\Http\Request;
@@ -16,39 +17,45 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+
     public function index(Request $request)
     {
+        // Get currency at the very start and ensure it's consistent throughout
         $currency = strtoupper(session('currency', 'GBP'));
-        $vatRate  = strtoupper($currency) === 'GBP' ? 0.20 : 0.00;
+        $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
         $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
-        $toPennies = function ($value) {
-            if ($value === null) return null;
-
-            $value = trim((string) $value);
-            if ($value === '') return null;
-
-            $value = preg_replace('/[^\d.]/', '', $value);
-            if ($value === '') return null;
-
-            [$pounds, $pence] = array_pad(explode('.', $value, 2), 2, '0');
-            $pence = substr(str_pad($pence, 2, '0'), 0, 2);
-
-            return ((int) $pounds * 100) + (int) $pence;
+        
+        
+       $toNetPennies = function ($value) use ($vatRate) {
+            if ($value === null || $value === '') return null;
+            
+            // Remove any non-numeric characters except decimal point
+            $value = preg_replace('/[^\d.]/', '', (string) $value);
+            if ($value === '' || $value === '.') return null;
+            
+            // The value from the frontend includes VAT. 
+            // We divide by (1 + vatRate) to get the net price the database expects.
+            $netFloat = (float) $value / (1 + $vatRate);
+            
+            // Round to 2 decimal places, then convert to pennies
+            return (int) round($netFloat * 100);
         };
 
+        // Build the base query with currency-specific eager loading
         $query = Product::with([
                 'activeVariants',
-                'activeVariants.prices',
+                'activeVariants.prices' => function ($q) use ($currency) {
+                    $q->where('currency_code', $currency);
+                },
                 'activeVariants.images',
                 'categories',
                 'brand'
             ])
             ->where('is_active', true);
 
-
+        // Search filter
         if ($request->filled('search')) {
             $searchTerm = trim($request->input('search'));
-
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('product_name', 'like', "%{$searchTerm}%")
                 ->orWhere('product_description', 'like', "%{$searchTerm}%")
@@ -56,12 +63,12 @@ class ProductController extends Controller
             });
         }
 
-
-        
+        // Category filter
         if ($request->filled('category')) {
             $input = (array) $request->category;
             $idInputs   = array_filter($input, fn ($c) => is_numeric($c));
             $slugInputs = array_filter($input, fn ($c) => !is_numeric($c));
+            
             $baseCategoryIds = Category::query()
                 ->when($idInputs, fn ($q) => $q->whereIn('category_id', $idInputs))
                 ->when($slugInputs, fn ($q) => $q->orWhereIn('slug', $slugInputs))
@@ -81,10 +88,9 @@ class ProductController extends Controller
             }
         }
 
-        
+        // Brand filter
         if ($request->filled('brand')) {
             $input = (array) $request->brand;
-
             $idInputs   = array_filter($input, fn($b) => is_numeric($b));
             $slugInputs = array_filter($input, fn($b) => !is_numeric($b));
 
@@ -99,74 +105,86 @@ class ProductController extends Controller
             }
         }
 
+        // Deals filter - ensure it respects currency
         if ($request->boolean('deals')) {
-            $currency = strtoupper(session('currency', 'GBP'));
-
             $query->whereHas('activeVariants.prices', function ($q) use ($currency) {
                 $q->where('currency_code', $currency)
                 ->whereNotNull('was_price_penny')
-                ->whereColumn('was_price_penny', '>', 'price_penny')
-                ->whereRaw('price_penny = (
-                    SELECT MIN(vcp2.price_penny)
-                    FROM product_variants pv2
-                    JOIN variant_currency_prices vcp2 ON vcp2.variant_id = pv2.variant_id
-                    WHERE pv2.product_id = products.product_id
-                        AND pv2.is_active = 1
-                        AND vcp2.currency_code = ?
-                )', [$currency]);
+                ->whereColumn('was_price_penny', '>', 'price_penny');
+            });
+            
+            // Also ensure we only get products where this variant is the cheapest
+            $query->whereExists(function ($subQuery) use ($currency) {
+                $subQuery->select(DB::raw(1))
+                    ->from('product_variants as pv')
+                    ->join('variant_currency_prices as vcp', 'pv.variant_id', '=', 'vcp.variant_id')
+                    ->whereColumn('pv.product_id', 'products.product_id')
+                    ->where('pv.is_active', true)
+                    ->where('vcp.currency_code', $currency)
+                    ->whereRaw('vcp.price_penny = (
+                        SELECT MIN(vcp2.price_penny)
+                        FROM product_variants pv2
+                        JOIN variant_currency_prices vcp2 ON vcp2.variant_id = pv2.variant_id
+                        WHERE pv2.product_id = products.product_id
+                            AND pv2.is_active = 1
+                            AND vcp2.currency_code = ?
+                    )', [$currency]);
             });
         }
 
-
-
-        
-        $minPennies = $toPennies($request->input('min_price'));
-        $maxPennies = $toPennies($request->input('max_price'));
+        // Price filter - CRITICAL: Ensure it only considers the current currency
+        $minPennies = $toNetPennies($request->input('min_price'));
+        $maxPennies = $toNetPennies($request->input('max_price'));
 
         if ($minPennies !== null || $maxPennies !== null) {
-            $query->whereHas('activeVariants.prices', function ($q) use ($currency, $minPennies, $maxPennies) {
-                $q->where('currency_code', $currency);
+            $priceFilterClosure = function ($sub) use ($currency, $minPennies, $maxPennies) {
+                $sub->select(DB::raw('MIN(vcp.price_penny)'))
+                    ->from('product_variants as pv')
+                    ->join('variant_currency_prices as vcp', 'pv.variant_id', '=', 'vcp.variant_id')
+                    ->whereColumn('pv.product_id', 'products.product_id')
+                    ->where('pv.is_active', true)
+                    ->where('vcp.currency_code', $currency);
+                    
+                if ($minPennies !== null && $maxPennies !== null) {
+                    $sub->havingRaw('MIN(vcp.price_penny) BETWEEN ? AND ?', [$minPennies, $maxPennies]);
+                } elseif ($minPennies !== null) {
+                    $sub->havingRaw('MIN(vcp.price_penny) >= ?', [$minPennies]);
+                } elseif ($maxPennies !== null) {
+                    $sub->havingRaw('MIN(vcp.price_penny) <= ?', [$maxPennies]);
+                }
+            };
 
-                if ($minPennies !== null) {
-                    $q->where('price_penny', '>=', $minPennies);
-                }
-                if ($maxPennies !== null) {
-                    $q->where('price_penny', '<=', $maxPennies);
-                }
-            });
+            // Apply to the main query
+            $query->whereExists($priceFilterClosure);
         }
 
-
-
+        // Set page title
         $pageTitle = 'All Products';
-
         if ($request->filled('search')) {
-            $pageTitle = 'Search Results for "'.$request->search.'"';
+            $pageTitle = 'Search Results for "' . $request->search . '"';
         } elseif ($request->boolean('deals')) {
             $pageTitle = 'Hot Deals';
         } elseif ($request->filled('category')) {
             $selected = (array) $request->category;
-
             if (count($selected) === 1) {
                 $one = Category::query()
                     ->where('category_id', $selected[0])
                     ->orWhere('slug', $selected[0])
                     ->first();
-
                 $pageTitle = $one?->category_name ?? 'Category';
             } else {
                 $pageTitle = 'Selected Categories';
             }
         }
 
-
-        
+        // Sorting - ensure it uses the correct currency for price sorting
         $sort = $request->get('sort', 'newest');
         switch ($sort) {
             case 'price_low':
             case 'price_high':
                 $direction = $sort === 'price_low' ? 'asc' : 'desc';
-
+                
+                // Use a subquery to get the minimum price for the current currency
                 $query->addSelect([
                     'min_price_penny' => DB::table('product_variants as pv')
                         ->join('variant_currency_prices as vcp', 'pv.variant_id', '=', 'vcp.variant_id')
@@ -175,7 +193,6 @@ class ProductController extends Controller
                         ->where('vcp.currency_code', $currency)
                         ->selectRaw('MIN(vcp.price_penny)')
                 ])->orderBy('min_price_penny', $direction);
-
                 break;
 
             case 'name_asc':
@@ -192,8 +209,8 @@ class ProductController extends Controller
         
         $perPage = $request->get('per_page', 12);
         $products = $query->paginate($perPage)->appends($request->query());
-        $currency = strtoupper(session('currency', 'GBP'));
 
+        // Get main categories with counts that respect all filters AND currency
         $mainCategories = Category::query()
             ->with(['children' => function ($q) {
                 $q->where('is_active', true)->orderBy('sort_order');
@@ -203,18 +220,24 @@ class ProductController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $applyCountFilters = function ($countQuery) use ($request, $currency, $toPennies) {
+        // Define the count filters closure that respects currency
+        $applyCountFilters = function ($countQuery) use ($request, $currency, $toNetPennies) {
+            $minPennies = $toNetPennies($request->input('min_price'));
+            $maxPennies = $toNetPennies($request->input('max_price'));
 
-            $minPennies = $toPennies($request->input('min_price'));
-            $maxPennies = $toPennies($request->input('max_price'));
-
+            // Apply price filter with currency
             $countQuery->whereHas('activeVariants.prices', function ($q) use ($currency, $minPennies, $maxPennies) {
                 $q->where('currency_code', $currency);
-
-                if ($minPennies !== null) $q->where('price_penny', '>=', $minPennies);
-                if ($maxPennies !== null) $q->where('price_penny', '<=', $maxPennies);
+                
+                if ($minPennies !== null) {
+                    $q->where('price_penny', '>=', $minPennies);
+                }
+                if ($maxPennies !== null) {
+                    $q->where('price_penny', '<=', $maxPennies);
+                }
             });
 
+            // Apply search filter
             if ($request->filled('search')) {
                 $searchTerm = $request->search;
                 $countQuery->where(function ($q) use ($searchTerm) {
@@ -224,6 +247,7 @@ class ProductController extends Controller
                 });
             }
 
+            // Apply brand filter
             if ($request->filled('brand')) {
                 $input = (array) $request->brand;
                 $idInputs   = array_filter($input, fn ($b) => is_numeric($b));
@@ -240,9 +264,19 @@ class ProductController extends Controller
                 }
             }
 
+            // Apply deals filter if active
+            if ($request->boolean('deals')) {
+                $countQuery->whereHas('activeVariants.prices', function ($q) use ($currency) {
+                    $q->where('currency_code', $currency)
+                    ->whereNotNull('was_price_penny')
+                    ->whereColumn('was_price_penny', '>', 'price_penny');
+                });
+            }
+
             return $countQuery;
         };
 
+        // Apply counts to categories
         $mainCategories->each(function ($parent) use ($applyCountFilters) {
             $parent->children->each(function ($child) use ($applyCountFilters) {
                 $countQuery = Product::query()
@@ -257,8 +291,10 @@ class ProductController extends Controller
             $parent->products_total = (int) $parent->children->sum('products_count');
         });
 
+        // Get brands
         $brands = Brand::where('is_active', true)->get();
         
+        // Get price range for the CURRENT CURRENCY only
         $priceRange = DB::table('variant_currency_prices')
             ->join('product_variants', 'variant_currency_prices.variant_id', '=', 'product_variants.variant_id')
             ->join('products', 'product_variants.product_id', '=', 'products.product_id')
@@ -270,6 +306,14 @@ class ProductController extends Controller
                 DB::raw('MAX(variant_currency_prices.price_penny) / 100 as max_price')
             )
             ->first();
+
+        $minNetFloat = ($dbPriceRange->min_penny ?? 0) / 100;
+        $maxNetFloat = ($dbPriceRange->max_penny ?? 100000) / 100;
+
+        $priceRange = (object) [
+            'min_price' => round($minNetFloat * (1 + $vatRate), 2),
+            'max_price' => round($maxNetFloat * (1 + $vatRate), 2)
+        ];
 
         // Wishlist variant IDs for current user
         $wishlistVariantIds = [];
@@ -290,7 +334,8 @@ class ProductController extends Controller
             'pageTitle',
             'vatRate',
             'vatLabel',
-            'wishlistVariantIds'
+            'wishlistVariantIds',
+            'currency' // Pass currency to view for display purposes
         ));
     }
 
@@ -305,8 +350,12 @@ class ProductController extends Controller
     }
 
     
-    public function show(Product $product): View
+    public function show(Product $product)
     {
+        if (!$product->is_active) {
+            return response()->view('errors.404-product', [], 404);
+        }
+
         $currency = strtoupper(session('currency', 'GBP'));
         $vatRate  = $currency === 'GBP' ? 0.20 : 0.00;
         $vatLabel = $vatRate > 0 ? 'incl. VAT' : 'excl. VAT';
@@ -397,12 +446,32 @@ class ProductController extends Controller
         if ($defaultVariant && $defaultVariant->inventory) {
             $defaultStock = max(0, $defaultVariant->inventory->available_stock - $defaultVariant->inventory->stock_allocated);
         }
+        
+        $sort = request('review_sort', 'newest');
 
-        $reviews = Review::where('product_id', $product->product_id)
+        $reviewsQuery = Review::where('product_id', $product->product_id)
             ->where('is_approved', true)
-            ->with('user')
-            ->orderByDesc('created_at')
-            ->get();
+            ->with(['user', 'helpfulVotes', 'images'])
+            ->withCount('helpfulVotes'); // Count votes for the "Most Helpful" sort
+
+        match ($sort) {
+            'oldest'         => $reviewsQuery->orderBy('created_at', 'asc'),
+            'highest_rating' => $reviewsQuery->orderBy('rating', 'desc')->orderBy('created_at', 'desc'),
+            'lowest_rating'  => $reviewsQuery->orderBy('rating', 'asc')->orderBy('created_at', 'desc'),
+            'most_helpful'   => $reviewsQuery->orderBy('helpful_votes_count', 'desc')->orderBy('created_at', 'desc'),
+            default          => $reviewsQuery->orderBy('created_at', 'desc'), // 'newest' fallback
+        };
+
+        $reviews = $reviewsQuery->get();
+
+        if (Auth::check()) {
+            $userId = Auth::user()->user_id;
+            foreach ($reviews as $review) {
+                // Check if a vote record exists for this user on this review
+                $hasVoted = $review->helpfulVotes->where('user_id', $userId)->isNotEmpty();
+                $review->user_vote = $hasVoted; // Will be true or false
+            }
+        }
 
         $reviewStats = [
             'count' => $reviews->count(),
@@ -424,6 +493,65 @@ class ProductController extends Controller
                     ->exists();
             }
         }
+        $categoryIds = $product->categories->pluck('category_id')->toArray();
+
+        $parentCategoryIds = $product->categories
+            ->whereNotNull('parent_id')
+            ->pluck('parent_id')
+            ->toArray();
+
+        $siblingCategoryIds = [];
+        if (!empty($parentCategoryIds)) {
+            $siblingCategoryIds = \App\Models\Category::whereIn('parent_id', $parentCategoryIds)
+                ->where('is_active', true)
+                ->pluck('category_id')
+                ->toArray();
+        }
+
+        $allRelatedCategoryIds = array_unique(array_merge($categoryIds, $siblingCategoryIds, $parentCategoryIds));
+
+        $relatedProducts = Product::where('is_active', true)
+            ->where('product_id', '!=', $product->product_id)
+            ->whereHas('categories', function ($q) use ($allRelatedCategoryIds) {
+                $q->whereIn('categories.category_id', $allRelatedCategoryIds);
+            })
+            ->with(['activeVariants.prices', 'activeVariants.images', 'brand'])
+            ->limit(8)
+            ->inRandomOrder()
+            ->get()
+            ->map(function ($p) use ($currency, $vatRate) {
+                $price = $p->bestPriceForCurrency($currency);
+                $firstImage = $p->activeVariants->flatMap->images->sortBy('sort_order')->first();
+
+                return [
+                    'product_id'   => $p->product_id,
+                    'product_name' => $p->product_name,
+                    'brand_name'   => $p->brand?->brand_name,
+                    'slug'         => $p->product_id,
+                    'image'        => $firstImage?->image_url ?? 'placeholders/product-placeholder.jpg',
+                    'price'        => $price ? round($price->price * (1 + $vatRate), 2) : null,
+                    'was_price'    => ($price && $price->was) ? round($price->was * (1 + $vatRate), 2) : null,
+                    'symbol'       => $price->symbol ?? '£',
+                ];
+            });
+
+
+        $bulkTiers = [];
+        foreach ($variants as $v) {
+            $tiers = \App\Models\BulkPricing::getTiers($v->variant_id, $currency);
+            if ($tiers->isNotEmpty()) {
+                $bulkTiers[$v->variant_id] = $tiers->map(function ($t) use ($vatRate) {
+                    return [
+                        'min_quantity' => $t->min_quantity,
+                        'price_penny'  => $t->price_penny,
+                        'price'        => round(($t->price_penny / 100) * (1 + $vatRate), 2),
+                    ];
+                })->toArray();
+            }
+        }
+
+        $defaultBulkTiers = $bulkTiers[$defaultVariant?->variant_id] ?? [];
+
 
         return view('products.show', compact(
             'product',
@@ -441,7 +569,10 @@ class ProductController extends Controller
             'reviews',
             'reviewStats',
             'userReview',
-            'inWishlist'
+            'inWishlist',
+            'relatedProducts',
+            'bulkTiers',
+            'defaultBulkTiers'
         ));
     }
 

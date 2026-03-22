@@ -1,8 +1,8 @@
-{{-- resources/views/account/layout.blade.php --}}
 @extends('layouts.app')
 
 @section('styles')
 <link rel="stylesheet" href="{{ asset('css/account.css') }}">
+<link rel="stylesheet" href="{{ asset('css/2fa.css') }}">
 @endsection
 
 @section('content')
@@ -30,10 +30,28 @@
                     <i class="bi bi-person"></i>
                     <span>My Profile</span>
                 </a>
+                <a href="{{ route('account.messages') }}"
+                   class="kb-account-nav-item {{ request()->routeIs('account.messages*') ? 'active' : '' }}">
+                    <i class="bi bi-envelope"></i>
+                    <span>Messages</span>
+                    @php
+                        $unreadCount = Auth::check()
+                            ? \App\Models\UserMessage::where('user_id', Auth::user()->user_id)->where('is_read', false)->count()
+                            : 0;
+                    @endphp
+                    @if($unreadCount > 0)
+                        <span class="kb-messages-badge">{{ $unreadCount }}</span>
+                    @endif
+                </a>
                 <a href="{{ route('account.orders') }}"
                    class="kb-account-nav-item {{ request()->routeIs('account.orders*') ? 'active' : '' }}">
                     <i class="bi bi-bag"></i>
                     <span>My Orders</span>
+                </a>
+                <a href="{{ route('account.2fa') }}"
+                   class="kb-account-nav-item {{ request()->routeIs('account.2fa*') ? 'active' : '' }}">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>Two-Factor Auth</span>
                 </a>
                 <a href="{{ route('wishlist.index') }}"
                    class="kb-account-nav-item {{ request()->routeIs('wishlist.index') ? 'active' : '' }}">
@@ -45,14 +63,24 @@
                     <i class="bi bi-geo-alt"></i>
                     <span>Addresses</span>
                 </a>
+                <a href="{{ route('account.cards') }}" 
+                    class="kb-account-nav-item {{ request()->routeIs('account.cards*') ? 'active' : '' }}">
+                    <i class="bi bi-credit-card"></i>
+                    <span>Saved Cards</span>
+                </a>
+                <a href="{{ route('account.subscription') }}"
+                    class="kb-account-nav-item {{ request()->routeIs('account.subscription*') ? 'active' : '' }}">
+                        <i class="bi bi-star"></i>
+                        <span>Subscription</span>
+                </a>
                 <a href="{{ route('account.reviews') }}"
                    class="kb-account-nav-item {{ request()->routeIs('account.reviews*') ? 'active' : '' }}">
-                    <i class="bi bi-star"></i>
+                    <i class="bi bi-chat-dots"></i>
                     <span>My Reviews</span>
                 </a>
                 <a href="{{ route('account.security') }}"
                    class="kb-account-nav-item {{ request()->routeIs('account.security*') ? 'active' : '' }}">
-                    <i class="bi bi-shield-lock"></i>
+                    <i class="bi bi-lock"></i>
                     <span>Security</span>
                 </a>
 
@@ -70,23 +98,6 @@
 
         {{-- MAIN CONTENT --}}
         <div class="kb-account-content">
-            @if (session('success'))
-                <div class="kb-account-alert kb-account-alert-success">
-                    <i class="bi bi-check-circle"></i>
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="kb-account-alert kb-account-alert-error">
-                    <i class="bi bi-exclamation-circle"></i>
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
 
             @yield('account-content')
         </div>

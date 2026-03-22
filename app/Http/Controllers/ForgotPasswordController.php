@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\LoginDetail;
 use App\Models\PasswordReset;
+use App\Rules\NotSimilarToUserData;
+use App\Rules\NoCommonPatterns;
 
 class ForgotPasswordController extends Controller
 {
@@ -101,6 +104,8 @@ class ForgotPasswordController extends Controller
                 'regex:/[a-z]/',
                 'regex:/[0-9]/',
                 'regex:/[@$!%*?&#]/',
+                new NotSimilarToUserData($request->first_name, $request->last_name, $request->email),
+                new NoCommonPatterns(),
             ],
         ], [
             'password.min'   => 'Password must be at least 8 characters.',
@@ -137,11 +142,8 @@ class ForgotPasswordController extends Controller
                 ->with('error', 'Account not found.');
         }
 
-        $salt = bin2hex(random_bytes(16));
-        $passwordHash = hash('sha256', $request->password . $salt);
-
-        $loginDetail->password_hash = $passwordHash;
-        $loginDetail->password_salt = $salt;
+        $loginDetail->password_hash = Hash::make($request->password);
+        $loginDetail->password_salt = ''; // or null if nullable
         $loginDetail->save();
 
         $reset->used = true;

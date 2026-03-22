@@ -11,7 +11,7 @@ class CardExpiry implements ValidationRule
     {
         $raw = trim((string) $value);
 
-        // Accept "MM/YY" only (as your UI shows)
+        // Accept "MM/YY" only
         if (!preg_match('/^(0[1-9]|1[0-2])\/(\d{2})$/', $raw, $m)) {
             $fail('Expiry must be in MM/YY format.');
             return;

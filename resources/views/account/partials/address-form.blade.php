@@ -1,4 +1,3 @@
-{{-- resources/views/account/partials/address-form.blade.php --}}
 @php $addr = $addr ?? null; @endphp
 
 <div class="kb-form-group">
@@ -46,10 +45,20 @@
                value="{{ old('postcode', $addr->postcode ?? '') }}" required>
     </div>
     <div class="kb-form-group">
-        <label class="kb-form-label">Country Code</label>
-        <input type="text" name="country_code" class="kb-form-input"
-               value="{{ old('country_code', $addr->country_code ?? 'GB') }}" maxlength="2" required>
-    </div>
+    <label class="kb-form-label required">Country</label>
+    <select name="country_code" class="kb-form-input">
+        @if(isset($countries))
+            @foreach($countries as $code => $name)
+                <option value="{{ $code }}"
+                    {{ (old('country_code', $addr->country_code ?? 'GB')) === $code ? 'selected' : '' }}>
+                    {{ $name }} ({{ $code }})
+                </option>
+            @endforeach
+        @else
+            <option value="GB" selected>United Kingdom (GB)</option>
+        @endif
+    </select>
+</div>
 </div>
 
 <div class="kb-form-row">

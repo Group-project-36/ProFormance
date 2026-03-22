@@ -8,15 +8,6 @@
         <h1 class="auth-title">Create Account</h1>
         <p class="auth-subtitle">Join ProFormance and start shopping</p>
 
-        {{-- Validation Errors --}}
-        @if($errors->any())
-            <div class="error-message">
-                @foreach($errors->all() as $error)
-                    <p>{{ $error }}</p>
-                @endforeach
-            </div>
-        @endif
-
         {{-- Breach Warning --}}
         @if(session('breach_warning'))
             <div class="kb-pw-breach-alert">
@@ -28,9 +19,6 @@
             </div>
         @endif
 
-        @if(session('success'))
-            <div class="success-message">{{ session('success') }}</div>
-        @endif
 
         <form method="POST" action="{{ route('register.post') }}" id="register-form" autocomplete="off">
             @csrf
@@ -38,14 +26,14 @@
             {{-- Name --}}
             <div class="name-group">
                 <div class="form-group" style="flex:1; margin-bottom:0;">
-                    <label for="first_name">First Name</label>
+                    <label for="first_name" class="required">First Name</label>
                     <input type="text" id="first_name" name="first_name" class="form-input"
-                           value="{{ old('first_name') }}" required>
+                           value="{{ old('first_name') }}" autocomplete="given-name" placeholder="e.g. John" aria-label="First Name" required>
                 </div>
                 <div class="form-group" style="flex:1; margin-bottom:0;">
-                    <label for="last_name">Last Name</label>
+                    <label for="last_name" class="required">Last Name</label>
                     <input type="text" id="last_name" name="last_name" class="form-input"
-                           value="{{ old('last_name') }}" required>
+                           value="{{ old('last_name') }}" autocomplete="family-name" placeholder="e.g. Smith" aria-label="Last Name" required>
                 </div>
             </div>
 
@@ -53,37 +41,39 @@
             <div class="form-group">
                 <label for="company_name">Company <span style="color:var(--kb-secondary-font)">(optional)</span></label>
                 <input type="text" id="company_name" name="company_name" class="form-input"
-                       value="{{ old('company_name') }}">
+                       value="{{ old('company_name') }} " autocomplete="organization" placeholder="e.g. ProFormance" aria-label="Company Name">
             </div>
 
             {{-- Phone --}}
-            <div class="form-group">
-                <label for="phone_number">Phone Number</label>
-                <div style="display:flex; gap:8px;">
-                    <select name="country_phone_code" class="form-input" style="width:100px; flex-shrink:0;">
-                        <option value="44" {{ old('country_phone_code', 44) == 44 ? 'selected' : '' }}>+44</option>
-                        <option value="1" {{ old('country_phone_code') == 1 ? 'selected' : '' }}>+1</option>
-                        <option value="353" {{ old('country_phone_code') == 353 ? 'selected' : '' }}>+353</option>
-                        <option value="91" {{ old('country_phone_code') == 91 ? 'selected' : '' }}>+91</option>
-                    </select>
-                    <input type="tel" id="phone_number" name="phone_number" class="form-input"
-                           value="{{ old('phone_number') }}" placeholder="7911123456" required>
-                </div>
-            </div>
+            <x-phone-input-register 
+                codeName="country_phone_code"
+                numberName="phone_number"
+                codeValue="{{ old('country_phone_code', '44') }}"
+                numberValue="{{ old('phone_number', '') }}"
+                label="Phone Number"
+                :required="true"
+            />
 
             {{-- Email --}}
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email" class="required">Email Address</label>
                 <input type="email" id="email" name="email" class="form-input"
-                       value="{{ old('email') }}" required>
+                       value="{{ old('email') }}" autocomplete="email" placeholder="email@address.com" aria-label="Email Address" required>
             </div>
+
+            <div class="form-group">
+                <label for="email-confirmation" class="required">Email Address Confirmation</label>
+                <input type="email" id="email_confirmation" name="email_confirmation" class="form-input"
+                       value="{{ old('email_confirmation') }}" autocomplete="off" title="Pasting is not allowed. Type it!" aria-label="Email Address Confirmation" placeholder="email@address.com" aria-label="Email Address" onpaste="return false;" ondrop="return false;" required>
+            </div>
+            <div class="kb-inline-msg" id="email-match-result" style="display:none;"></div>
 
             {{-- Password --}}
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password" class="required">Password</label>
                 <div class="password-wrapper">
                     <input type="password" id="password" name="password" class="form-input"
-                           required autocomplete="new-password">
+                           required autocomplete="new-password" placeholder="e.g. ************" aria-label="password">
                     <button type="button" class="password-toggle" onclick="togglePassword('password', this)">
                         <i class="bi bi-eye"></i>
                     </button>
@@ -122,15 +112,16 @@
                 </div>
 
                 {{-- Breach Check Result (populated via AJAX) --}}
+                <div id="pw-policy-result" class="kb-pw-breach-inline" style="display:none;"></div>
                 <div class="kb-pw-breach-inline" id="pw-breach-result" style="display:none;"></div>
             </div>
 
             {{-- Confirm Password --}}
             <div class="form-group">
-                <label for="password_confirmation">Confirm Password</label>
+                <label for="password_confirmation" class="required">Confirm Password</label>
                 <div class="password-wrapper">
                     <input type="password" id="password_confirmation" name="password_confirmation"
-                           class="form-input" required autocomplete="new-password">
+                           class="form-input" required autocomplete="new-password" placeholder="e.g. ************" aria-label="password confirmation">
                     <button type="button" class="password-toggle" onclick="togglePassword('password_confirmation', this)">
                         <i class="bi bi-eye"></i>
                     </button>

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\LoginDetail;
+use App\Rules\NotSimilarToUserData;
+use App\Rules\NoCommonPatterns;
 
 class RegisterController extends Controller
 {
@@ -25,7 +27,7 @@ class RegisterController extends Controller
             'company_name'        => ['nullable', 'string', 'max:255'],
             'country_phone_code'  => ['required', 'integer'],
             'phone_number'        => ['required', 'string', 'regex:/^[0-9]{10,15}$/'],
-            'email'               => ['required', 'string', 'email', 'max:255', 'unique:login_details,email_address'],
+            'email'               => ['required', 'string', 'email', 'confirmed', 'max:255', 'unique:login_details,email_address'],
             'password'            => [
                 'required',
                 'string',
@@ -35,6 +37,8 @@ class RegisterController extends Controller
                 'regex:/[a-z]/',      // at least one lowercase
                 'regex:/[0-9]/',      // at least one number
                 'regex:/[@$!%*?&#]/', // at least one special character
+                new NotSimilarToUserData($request->first_name, $request->last_name, $request->email),
+                new NoCommonPatterns(),
             ],
             'terms' => ['accepted'],
         ], [
@@ -44,6 +48,7 @@ class RegisterController extends Controller
             'email.email'          => 'Please enter a valid email address.',
             'password.min'         => 'Password must be at least 8 characters.',
             'password.regex'       => 'Password must include uppercase, lowercase, number, and special character.',
+            'email.confirmed' => 'Email addresses do not match.',
         ]);
 
         if ($validator->fails()) {
@@ -83,8 +88,8 @@ class RegisterController extends Controller
             LoginDetail::create([
                 'user_id'       => $user->user_id,
                 'email_address' => $request->email,
-                'password_hash' => $passwordHash,
-                'password_salt' => $salt,
+                'password_hash' => Hash::make($request->password),
+                'password_salt' => '',
             ]);
 
             \DB::commit();

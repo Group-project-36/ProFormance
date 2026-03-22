@@ -1,4 +1,3 @@
-{{-- resources/views/account/addresses.blade.php --}}
 @extends('account.layout')
 
 @section('account-content')
@@ -70,6 +69,7 @@
                     @endif
                     <p>{{ $address->city }}{{ $address->county ? ', ' . $address->county : '' }}</p>
                     <p>{{ $address->postcode }}</p>
+                    <p>{{ $address->country_code }}</p>
                     @if($address->phone_number)
                         <p><i class="bi bi-telephone"></i> +{{ $address->country_phone_code }} {{ $address->phone_number }}</p>
                     @endif

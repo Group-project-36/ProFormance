@@ -19,7 +19,8 @@ class User extends Authenticatable
         'phone_number',
         'user_role',
         'is_active',
-        'email_verified'
+        'email_verified',
+        'google_id',
     ];
 
     protected $hidden = [
@@ -32,9 +33,9 @@ class User extends Authenticatable
         'email_verified' => 'boolean',
         'is_active' => 'boolean',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
+        'password_changed_at' => 'datetime',
     ];
-
     public function getNameAttribute()
     {
         return trim($this->first_name . ' ' . $this->last_name);

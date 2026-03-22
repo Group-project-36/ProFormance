@@ -7,28 +7,6 @@
         <h1 class="auth-title">Forgot Password</h1>
         <p class="auth-subtitle">Enter your email and we'll send you a link to reset your password.</p>
 
-        @if(session('success'))
-            <div class="success-message">
-                <i class="bi bi-check-circle" style="margin-right:6px;"></i>
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="error-message">
-                <i class="bi bi-exclamation-circle" style="margin-right:6px;"></i>
-                {{ session('error') }}
-            </div>
-        @endif
-
-        @if($errors->any())
-            <div class="error-message">
-                @foreach($errors->all() as $error)
-                    <p>{{ $error }}</p>
-                @endforeach
-            </div>
-        @endif
-
         <form method="POST" action="{{ route('password.sendResetLink') }}">
             @csrf
 

@@ -14,12 +14,16 @@ class Brand extends Model
     public $timestamps   = true;
 
     protected $fillable = [
-        'name',
+        'brand_name',
         'slug',
-        'description',
+        'brand_description',
         'logo_url',
         'is_active',
         'sort_order',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     public function products()

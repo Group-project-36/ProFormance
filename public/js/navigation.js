@@ -1,10 +1,3 @@
-/**
- * navigation.js
- *
- * All header/nav UI: dropdowns, account menu, category sidebar,
- * cart sidebar, category submenus, and mobile menu.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── Custom dropdowns (sort, currency, etc.) ──
@@ -56,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlayAll = document.querySelector('.kb-sidebar-overlay-all');
 
     const cartBtn     = document.querySelector('.kb-cart-btn');
-    const sidebarCart = document.querySelector('.kb-sidebar-cart');
     const overlayCart = document.querySelector('.kb-sidebar-overlay-cart');
     const closeCart   = document.querySelector('.kb-sidebar-close-cart');
 

@@ -2,30 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Address;
-use App\Models\Discount;
-use App\Models\DiscountRedemption;
+use App\Models\SavedCard;
+use App\Models\ShippingRate;
 use App\Models\TaxProfile;
-
+use App\Services\Checkout\OrderService;
+use App\Services\Checkout\PricingService;
 
 use App\Rules\Luhn;
 use App\Rules\CardNumberBrand;
 use App\Rules\CardExpiry;
 use App\Rules\CardCvv;
 
-use App\Support\CardBrands;
-
-
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
+    public function __construct(
+        protected PricingService $pricing,
+        protected OrderService $orders,
+    ) {}
+
     protected function currency(): string
     {
         return session('currency', 'gbp');
@@ -35,35 +34,10 @@ class CheckoutController extends Controller
     {
         return session('cart', []);
     }
-    private function cartSubtotalPenny(array $cart): int
-    {
-        $subtotal = 0;
 
-        foreach ($cart as $line) {
-            $qty = (int)($line['quantity'] ?? 0);
-
-            $unitPenny = isset($line['price_penny'])
-                ? (int)$line['price_penny']
-                : (int) round(((float)($line['price'] ?? 0)) * 100);
-
-            $subtotal += $unitPenny * $qty;
-        }
-
-        return $subtotal;
-    }
-
-    private function vatRateFor(string $countryCode, ?TaxProfile $taxProfile): float
-    {
-        $countryCode = strtoupper(trim($countryCode));
-        $rate = ($countryCode === 'GB') ? 0.20 : 0.00;
-
-        if ($taxProfile && (int)$taxProfile->tax_exempt === 1) {
-            $rate = 0.00;
-        }
-
-        return $rate;
-    }
-
+    // ─────────────────────────────────────────
+    // SHOW CHECKOUT PAGE
+    // ─────────────────────────────────────────
 
     public function show(Request $request)
     {
@@ -72,175 +46,111 @@ class CheckoutController extends Controller
                 ->with('error', 'Please sign in to proceed to checkout.');
         }
 
-        
-
         $cart = $this->getCart();
-
-        $giftOrders = session('gift_orders', []);
-        $isGift = false;
-
-        foreach ($cart as $line) {
-            $variantId = $line['variant_id'] ?? null;
-            if ($variantId && isset($giftOrders[$variantId])) {
-                $isGift = true;
-                $giftShippingPreview = $giftOrders[$variantId];
-                break;
-            }
-        }
-
         if (empty($cart)) {
             return redirect()->route('cart.index')
                 ->with('error', 'Your basket is empty.');
         }
 
-        $user = Auth::user();
-
-        // Addresses (default first)
-        $addresses = Address::where('user_id', $user->user_id)
+        $user       = Auth::user();
+        $addresses  = Address::where('user_id', $user->user_id)
             ->orderByDesc('is_default_shipping_address')
             ->get();
         $defaultAddress = $addresses->first();
-        $shipCountryCode = $defaultAddress?->country_code ?? 'GB';
-        $giftOrders = session('gift_orders', []);
-        $isGift = false;
+        $taxProfile     = TaxProfile::where('user_id', $user->user_id)->first();
+
+        // Run the full pricing pipeline
+        $p = $this->pricing->calculateAll([
+            'cart'               => $cart,
+            'giftOrders'         => session('gift_orders', []),
+            'purchaserCountry'   => $defaultAddress?->country_code ?? 'GB',
+            'taxProfile'         => $taxProfile,
+            'shippingMethod'     => $request->input('shipping_method', 'standard'),
+            'giftShippingMethod' => $request->input('gift_shipping_method', 'standard'),
+            'sessionDiscount'    => session('checkout_discount'),
+            'userId'             => $user->user_id,
+            'user'               => $user,
+        ]);
+
+        // Gift shipping preview (minimal info for display)
         $giftShippingPreview = null;
-
-        foreach ($cart as $line) {
-            $variantId = $line['variant_id'] ?? null;
-            if ($variantId && isset($giftOrders[$variantId])) {
-                $isGift = true;
-                $giftShippingPreview = $giftOrders[$variantId];
-                break;
+        if ($p['isGift'] && !empty($p['giftItems'])) {
+            $firstGiftVariant = $p['giftItems'][0]['variant_id'] ?? null;
+            if ($firstGiftVariant && isset($p['giftOrders'][$firstGiftVariant])) {
+                $giftShippingPreview = [
+                    'recipient_name' => 'Gift Recipient',
+                    'country_code'   => $p['giftOrders'][$firstGiftVariant]['country_code'] ?? 'GB',
+                ];
             }
         }
-        $subtotalPenny = $this->cartSubtotalPenny($cart);
-        $totalItems = array_sum(array_map(fn ($l) => (int)($l['quantity'] ?? 0), $cart));
-        $appliedDiscount = session('checkout_discount');
-        $discountPenny = 0;
 
-        if ($appliedDiscount) {
-            $discount = Discount::find($appliedDiscount['discount_id']);
-            if ($discount) {
-                $discountPenny = $discount->calculatePenny($subtotalPenny);
-            }
+        // Shipping methods for the primary destination
+        $primaryCountryCode = $p['destinations'][0]['country'] ?? 'GB';
+        $shippingMethods    = ShippingRate::methodsFor($primaryCountryCode);
+
+        // Gift shipping methods for mixed carts
+        $giftShippingMethods = collect();
+        $giftCountryCode     = $primaryCountryCode;
+        if ($p['hasMixedCart'] && !empty($p['giftItems'])) {
+            $firstGiftVariant = $p['giftItems'][0]['variant_id'] ?? null;
+            $giftCountryCode  = ($firstGiftVariant && isset($p['giftOrders'][$firstGiftVariant]))
+                ? ($p['giftOrders'][$firstGiftVariant]['country_code'] ?? 'GB')
+                : 'GB';
+            $giftShippingMethods = ShippingRate::methodsFor($giftCountryCode);
         }
-        $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
-        $vatRate = $this->vatRateFor($shipCountryCode, $taxProfile);
 
-        $taxablePenny = max(0, $subtotalPenny - $discountPenny);
-        $taxPenny = (int) round($taxablePenny * $vatRate);
-        $shippingMethod = $data['shipping_method'] ?? 'standard';
-        $shippingPenny = $this->shippingPennyFor($shipCountryCode, $shippingMethod);
-        $totalPenny = max(0, $taxablePenny + $taxPenny + $shippingPenny);
+        // Saved cards
+        $savedCards = SavedCard::where('user_id', $user->user_id)
+            ->where('expiry_year', '>=', now()->year)
+            ->orderByDesc('is_default')
+            ->get();
 
         $symbol = $cart[0]['symbol'] ?? '£';
+        $countries = \Illuminate\Support\Facades\DB::table('countries')
+            ->orderBy('country_name')
+            ->pluck('country_name', 'country_code');
 
         return view('checkout.show', [
-            'lines'           => $cart,
-            'addresses'       => $addresses,
-            'user'            => $user,
-            'appliedDiscount' => $appliedDiscount,
-            'isGift' => $isGift,
-            'giftShippingPreview' => $giftShippingPreview,
-            'subtotalPenny'   => $subtotalPenny,
-            'discountPenny'   => $discountPenny,
-            'taxPenny'        => $taxPenny,
-            'shippingPenny'   => $shippingPenny,
-            'totalPenny'      => $totalPenny,
-            'vatRate'         => $vatRate,
-            'shipCountryCode' => $shipCountryCode,
-            'totalItems'      => $totalItems,
-            'symbol'          => $symbol,
+            'lines'                    => $cart,
+            'addresses'                => $addresses,
+            'user'                     => $user,
+            'countries'                => $countries,
+            'appliedDiscount'          => $p['appliedDiscount'],
+            'isGift'                   => $p['isGift'],
+            'hasMixedCart'             => $p['hasMixedCart'],
+            'giftShippingPreview'      => $giftShippingPreview,
+            'giftItems'                => $p['giftItems'],
+            'nonGiftItems'             => $p['nonGiftItems'],
+            'subtotalExVatPenny'       => $p['subtotalExVatPenny'],
+            'discountPenny'            => $p['discountPenny'],
+            'shippingNetPenny'         => $p['shippingNetPenny'],
+            'originalShippingNetPenny' => $p['originalShippingNetPenny'],
+            'combinedVatPenny'         => $p['combinedVatPenny'],
+            'totalPenny'               => $p['totalPenny'],
+            'vatRate'                  => $p['vatRate'],
+            'destinations'             => $p['destinations'],
+            'totalItems'               => array_sum(array_column($cart, 'quantity')),
+            'symbol'                   => $symbol,
+            'shipCountryCode'          => $primaryCountryCode,
+            'selectedShippingMethod'   => $request->input('shipping_method', 'standard'),
+            'savedCards'               => $savedCards,
+            'shippingMethods'          => $shippingMethods,
+            'giftShippingMethods'      => $giftShippingMethods,
+            'giftCountryCode'          => $giftCountryCode,
+            'activeSubscription'       => $p['activeSubscription'],
+            'subDiscountPenny'         => $p['subDiscountPenny'],
+            'subFreeShipping'          => $p['subFreeShipping'],
+            'ssDiscountPenny'          => $p['ssDiscountPenny'],
+            'ssDiscountPercent'        => $p['ssDiscountPercent'],
+            'ssActiveItems'            => $p['ssActiveItems'],
+            'plan'                     => $p['plan'],
+            'potentialSavings'         => $p['potentialSavings'],
         ]);
     }
 
-    public function applyDiscount(Request $request)
-    {
-        $request->validate([
-            'discount_code' => 'required|string|max:50',
-        ]);
-
-        $cart = $this->getCart();
-        $subtotalPenny = $this->cartSubtotalPenny($cart);
-
-        $discount = Discount::where('discount_code', strtoupper(trim($request->discount_code)))
-            ->first();
-
-        if (!$discount) {
-            return back()->withErrors(['discount_code' => 'Invalid discount code.']);
-        }
-
-        $valid = $discount->isValid($subtotalPenny, Auth::user()->user_id);
-
-        if ($valid !== true) {
-            return back()->withErrors(['discount_code' => $valid]);
-        }
-
-        $discountPenny = $discount->calculatePenny($subtotalPenny);
-
-        session(['checkout_discount' => [
-            'discount_id'    => $discount->discount_id,
-            'discount_code'  => $discount->discount_code,
-            'discoun_type'   => $discount->discoun_type,
-            'discount_value' => $discount->discount_value,
-            'amount_penny'   => $discountPenny,
-        ]]);
-
-        return back()->with('success', 'Discount code applied!');
-    }
-
-    public function totals(Request $request)
-    {
-        $request->validate([
-            'ship_country_code' => 'required|string|size:2',
-            'shipping_method'   => 'required|in:standard,next_day',
-        ]);
-
-        $cart = $this->getCart();
-        $subtotalPenny = $this->cartSubtotalPenny($cart);
-
-        $appliedDiscount = session('checkout_discount');
-        $discountPenny = 0;
-
-        if ($appliedDiscount) {
-            $discount = Discount::find($appliedDiscount['discount_id']);
-            if ($discount) {
-                $discountPenny = $discount->calculatePenny($subtotalPenny);
-            }
-        }
-
-        $user = Auth::user();
-        $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
-
-        $shipCountryCode = strtoupper(trim($request->ship_country_code));
-        $vatRate = $this->vatRateFor($shipCountryCode, $taxProfile);
-
-        $taxablePenny = max(0, $subtotalPenny - $discountPenny);
-        $taxPenny = (int) round($taxablePenny * $vatRate);
-
-        $shippingMethod = $request->shipping_method;
-        $shippingPenny = $this->shippingPennyFor($shipCountryCode, $shippingMethod);
-        $totalPenny = max(0, $taxablePenny + $taxPenny + $shippingPenny);
-        $totalPenny = max(0, $taxablePenny + $taxPenny + $shippingPenny);
-
-        return response()->json([
-            'ok' => true,
-            'subtotalPenny' => $subtotalPenny,
-            'discountPenny' => $discountPenny,
-            'taxPenny' => $taxPenny,
-            'shippingPenny' => $shippingPenny,
-            'totalPenny' => $totalPenny,
-            'vatRate' => $vatRate,
-            'shipCountryCode' => $shipCountryCode,
-        ]);
-    }
-
-
-    public function removeDiscount()
-    {
-        session()->forget('checkout_discount');
-        return back()->with('success', 'Discount removed.');
-    }
+    // ─────────────────────────────────────────
+    // PLACE ORDER
+    // ─────────────────────────────────────────
 
     public function store(Request $request)
     {
@@ -248,295 +158,143 @@ class CheckoutController extends Controller
             return redirect()->route('login');
         }
 
-        $usingSavedAddress = $request->filled('address_id');
-        $billingSame       = $request->has('billing_same');
-         $method = $request->input('payment_method', 'card');
-
-        $data = $request->validate([
-            'address_id'            => 'nullable|integer',
-            'ship_recipient_name'   => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:200',
-            'ship_house_number'     => 'nullable|string|max:10',
-            'ship_address_line_one' => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:100',
-            'ship_address_line_two' => 'nullable|string|max:100',
-            'ship_city'             => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:100',
-            'ship_county'           => 'nullable|string|max:100',
-            'ship_postcode'         => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:100',
-            'ship_country_code'     => ($usingSavedAddress ? 'nullable' : 'required') . '|string|max:2',
-            'ship_phone_number'     => 'nullable|string|max:30',
-
-            'billing_same'          => 'sometimes|in:1',
-            'bill_recipient_name'   => ($billingSame ? 'nullable' : 'required') . '|string|max:200',
-            'bill_house_number'     => 'nullable|string|max:10',
-            'bill_address_line_one' => ($billingSame ? 'nullable' : 'required') . '|string|max:100',
-            'bill_address_line_two' => 'nullable|string|max:100',
-            'bill_city'             => ($billingSame ? 'nullable' : 'required') . '|string|max:100',
-            'bill_county'           => 'nullable|string|max:100',
-            'bill_postcode'         => ($billingSame ? 'nullable' : 'required') . '|string|max:100',
-            'bill_country_code'     => ($billingSame ? 'nullable' : 'required') . '|string|max:2',
-            'bill_phone_number'     => 'nullable|string|max:30',
-
-            'payment_method' => ['required', 'in:card,paypal'],
-
-            'card_name'   => $method === 'paypal'
-                ? ['nullable']
-                : ['required','string','max:200'],
-
-            'card_number' => $method === 'paypal'
-                ? ['nullable']
-                : ['required','string','max:30', new Luhn(), new CardNumberBrand()],
-
-            'card_expiry' => $method === 'paypal'
-                ? ['nullable']
-                : ['required','string','max:7', new CardExpiry()],
-
-            'card_cvv'    => $method === 'paypal'
-                ? ['nullable']
-                : ['required','string','max:4', new CardCvv($request->input('card_number'))],
-            'order_notes'      => 'nullable|string|max:1000',
-            'shipping_method' => 'required|in:standard,next_day',
-        ]);
-
         $user = Auth::user();
         $cart = $this->getCart();
 
-        $totalItems = array_sum(array_map(fn ($l) => (int)($l['quantity'] ?? 0), $cart));
+        $totalItems = array_sum(array_map(fn($l) => (int) ($l['quantity'] ?? 0), $cart));
         if ($totalItems === 0) {
-            return redirect()->route('cart.index')
-                ->with('error', 'Your basket is empty.');
-        }
-        
-        $giftOrders = session('gift_orders', []);
-        $cart = $this->getCart();
-
-        $giftShipping = null;
-        foreach ($cart as $line) {
-            $variantId = $line['variant_id'] ?? null;
-            if ($variantId && isset($giftOrders[$variantId])) {
-                $giftShipping = $giftOrders[$variantId];
-                break;
-            }
-        }
-        if ($giftShipping) {
-            $shipping = [
-                'address_id'       => $giftShipping['address_id'] ?? null,
-                'recipient_name'   => $giftShipping['recipient_name'] ?? null,
-                'house_number'     => $giftShipping['house_number'] ?? null,
-                'address_line_one' => $giftShipping['address_line_one'] ?? null,
-                'address_line_two' => $giftShipping['address_line_two'] ?? null,
-                'city'             => $giftShipping['city'] ?? null,
-                'county'           => $giftShipping['county'] ?? null,
-                'postcode'         => $giftShipping['postcode'] ?? null,
-                'country_code'     => $giftShipping['country_code'] ?? null,
-                'phone_number'     => $giftShipping['phone_number'] ?? null,
-            ];
-        } else {
-            $shipping = $this->resolveShippingAddress($data, $user);
+            return redirect()->route('cart.index')->with('error', 'Your basket is empty.');
         }
 
+        // ── Validation flags ──
+        $usingSavedAddress = $request->filled('address_id');
+        $billingSame       = $request->has('billing_same');
+        $usingSavedBilling = !$billingSame && $request->filled('billing_address_id');
+        $method            = $request->input('payment_method', 'card');
+        $usingSavedCard    = $request->filled('saved_card_id');
 
-    $shipCountryCode = strtoupper($shipping['country_code'] ?? 'GB');
-        $shippingMethod = $data['shipping_method'] ?? 'standard';
+        // Gift detection for skip-shipping logic
+        $giftOrders    = session('gift_orders', []);
+        $cartVids      = collect($cart)->pluck('variant_id')->filter()->map(fn($id) => (string) $id)->toArray();
+        $hasGiftItems  = !empty(array_intersect_key($giftOrders, array_flip($cartVids)));
+        $nonGiftLines  = collect($cart)->filter(fn($line) => !isset($giftOrders[(string) ($line['variant_id'] ?? '')]));
+        $isGiftOnly    = $hasGiftItems && $nonGiftLines->isEmpty();
+        $skipShipValid = $usingSavedAddress || $isGiftOnly;
 
-        if (!empty($data['billing_same'])) {
-            $billing = $shipping;
-        } else {
-            $billing = [
-                'recipient_name'   => $data['bill_recipient_name'],
-                'house_number'     => $data['bill_house_number'] ?? null,
-                'address_line_one' => $data['bill_address_line_one'],
-                'address_line_two' => $data['bill_address_line_two'] ?? null,
-                'city'             => $data['bill_city'],
-                'county'           => $data['bill_county'] ?? null,
-                'postcode'         => $data['bill_postcode'],
-                'country_code'     => $data['bill_country_code'],
-                'phone_number'     => $data['bill_phone_number'] ?? null,
-            ];
-        }
-
-        $selectedMethod = $request->input('payment_method');
-
+        // ── Validate ──
         $data = $request->validate([
+            'address_id'            => 'nullable|integer',
+            'ship_recipient_name'   => ($skipShipValid ? 'nullable' : 'required') . '|string|max:200',
+            'ship_house_number'     => 'nullable|string|max:10',
+            'ship_address_line_one' => ($skipShipValid ? 'nullable' : 'required') . '|string|max:100',
+            'ship_address_line_two' => 'nullable|string|max:100',
+            'ship_city'             => ($skipShipValid ? 'nullable' : 'required') . '|string|max:100',
+            'ship_county'           => 'nullable|string|max:100',
+            'ship_postcode'         => ($skipShipValid ? 'nullable' : 'required') . '|string|max:100',
+            'ship_country_code'     => ($skipShipValid ? 'nullable' : 'required') . '|string|max:2',
+            'ship_phone_number'     => 'nullable|string|max:30',
 
-            'payment_method' => ['required', 'string', Rule::in(['card','paypal'])],
+            'billing_same'          => 'sometimes|in:1',
+            'billing_address_id'    => 'nullable|integer',
+            'bill_recipient_name'   => (($billingSame || $usingSavedBilling) ? 'nullable' : 'required') . '|string|max:200',
+            'bill_house_number'     => 'nullable|string|max:10',
+            'bill_address_line_one' => (($billingSame || $usingSavedBilling) ? 'nullable' : 'required') . '|string|max:100',
+            'bill_address_line_two' => 'nullable|string|max:100',
+            'bill_city'             => (($billingSame || $usingSavedBilling) ? 'nullable' : 'required') . '|string|max:100',
+            'bill_county'           => 'nullable|string|max:100',
+            'bill_postcode'         => (($billingSame || $usingSavedBilling) ? 'nullable' : 'required') . '|string|max:100',
+            'bill_country_code'     => (($billingSame || $usingSavedBilling) ? 'nullable' : 'required') . '|string|max:2',
+            'bill_phone_number'     => 'nullable|string|max:30',
 
-            'card_name'   => ['required_unless:payment_method,paypal', 'nullable', 'string', 'max:200'],
+            'payment_method' => ['required', 'in:card,paypal'],
+            'card_name'   => ($method === 'paypal' || $usingSavedCard) ? ['nullable'] : ['required', 'string', 'max:200'],
+            'card_number' => ($method === 'paypal' || $usingSavedCard) ? ['nullable'] : ['required', 'string', 'max:30', new Luhn(), new CardNumberBrand()],
+            'card_expiry' => ($method === 'paypal' || $usingSavedCard) ? ['nullable'] : ['required', 'string', 'max:7', new CardExpiry()],
+            'card_cvv'    => ($method === 'paypal' || $usingSavedCard) ? ['nullable'] : ['required', 'string', 'max:4', new CardCvv($request->input('card_number'))],
 
-            'card_number' => $selectedMethod === 'paypal'
-                ? ['nullable']
-                : ['required', 'string', 'max:30', new Luhn(), new CardNumberBrand($selectedMethod)],
-
-            'card_expiry' => $selectedMethod === 'paypal'
-                ? ['nullable']
-                : ['required', 'string', 'max:7', new CardExpiry()],
-
-            'card_cvv'    => $selectedMethod === 'paypal'
-                ? ['nullable']
-                : ['required', 'string', 'max:4', new CardCvv($selectedMethod)],
-
-            'order_notes' => ['nullable','string','max:1000'],
-            'shipping_method' => ['required','in:standard,next_day'],
+            'order_notes'          => 'nullable|string|max:1000',
+            'shipping_method'      => ['required', Rule::in(ShippingRate::query()->where('is_active', true)->pluck('method_key')->unique()->toArray())],
+            'gift_shipping_method' => ['nullable', Rule::in(ShippingRate::query()->where('is_active', true)->pluck('method_key')->unique()->toArray())],
+            'save_address'         => 'sometimes|in:1',
+            'save_card'            => 'sometimes|in:1',
+            'saved_card_id'        => 'nullable|integer|exists:saved_cards,card_id,user_id,' . Auth::id(),
         ]);
 
+        // ── Resolve addresses ──
+        $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
 
-        $subtotalPenny = $this->cartSubtotalPenny($cart);
+        $gifts        = $this->pricing->detectGifts($cart, $giftOrders);
+        $giftShipping = null;
+        if (!empty($gifts['giftItems']) && empty($gifts['nonGiftItems'])) {
+            $firstGiftVariant = $gifts['giftItems'][0]['variant_id'];
+            $giftShipping     = $giftOrders[$firstGiftVariant] ?? null;
+        }
 
-        $discountPenny = 0;
-        $appliedDiscount = session('checkout_discount');
-        $discount = null;
+        $shipping = $giftShipping
+            ? $this->resolveGiftShipping($giftShipping)
+            : $this->resolveShippingAddress($data, $user);
 
-        if ($appliedDiscount) {
-            $discount = Discount::find($appliedDiscount['discount_id']);
-            if ($discount) {
-                $valid = $discount->isValid($subtotalPenny, $user->user_id);
-                if ($valid === true) {
-                    $discountPenny = $discount->calculatePenny($subtotalPenny);
-                }
+        $billing = $this->resolveBillingAddress($data, $shipping, $user);
+
+        // ── Purchaser country ──
+        $defaultAddress   = Address::where('user_id', $user->user_id)->where('is_default_shipping_address', true)->first();
+        $purchaserCountry = $defaultAddress?->country_code ?? 'GB';
+
+        // ── Calculate pricing ──
+        $p = $this->pricing->calculateAll([
+            'cart'               => $cart,
+            'giftOrders'         => $gifts['giftOrders'],
+            'purchaserCountry'   => $purchaserCountry,
+            'taxProfile'         => $taxProfile,
+            'shippingMethod'     => $data['shipping_method'] ?? 'standard',
+            'giftShippingMethod' => $data['gift_shipping_method'] ?? ($data['shipping_method'] ?? 'standard'),
+            'sessionDiscount'    => session('checkout_discount'),
+            'userId'             => $user->user_id,
+            'user'               => $user,
+        ]);
+
+        // Re-validate discount if present
+        if ($p['discount']) {
+            $discountCheck = $this->pricing->validateDiscount($p['discount'], $p['subtotalExVatPenny'], $user->user_id);
+            if ($discountCheck['error']) {
+                return back()->withErrors(['discount_code' => $discountCheck['error']]);
             }
         }
 
-        $taxProfile = TaxProfile::where('user_id', $user->user_id)->first();
-        $vatRate = $this->vatRateFor($shipCountryCode, $taxProfile);
+        // Add shipping method to pricing for order record
+        $p['shippingMethod'] = $data['shipping_method'] ?? 'standard';
 
-        $taxablePenny = max(0, $subtotalPenny - $discountPenny);
-        $taxPenny = (int) round($taxablePenny * $vatRate);
-        $shippingMethod = $data['shipping_method'] ?? 'standard';
-        $shippingPenny = $this->shippingPennyFor($shipCountryCode, $shippingMethod);
-        $totalPenny = max(0, $taxablePenny + $taxPenny + $shippingPenny);
-        DB::transaction(function () use (
-            $cart, $user, $shipping, $billing, $data,
-            $subtotalPenny, $shippingPenny, $taxPenny, $discountPenny, $totalPenny,
-            $discount, $vatRate, $request
-        ) {
-            $order = Order::create([
-                'order_number'   => 'ORD-' . strtoupper(Str::random(10)),
-                'user_id'        => $user->user_id,
-                'currency_code'  => strtoupper($this->currency()),
-                'order_status'   => 'Paid',
+        // ── Place order ──
+        $order = $this->orders->placeOrder([
+            'user'              => $user,
+            'cart'              => $cart,
+            'shipping'          => $shipping,
+            'billing'           => $billing,
+            'pricing'           => $p,
+            'paymentMethod'     => $data['payment_method'],
+            'paymentData'       => [
+                'card_name'     => $data['card_name'] ?? null,
+                'card_number'   => $data['card_number'] ?? null,
+                'card_expiry'   => $data['card_expiry'] ?? null,
+            ],
+            'giftOrders'        => $gifts['giftOrders'],
+            'currency'          => $this->currency(),
+            'orderNotes'        => $data['order_notes'] ?? null,
+            'saveAddress'       => $request->has('save_address'),
+            'saveCard'          => $request->has('save_card'),
+            'usingSavedAddress' => $usingSavedAddress,
+        ]);
 
-                'subtotal_penny' => $subtotalPenny,
-                'shipping_penny' => $shippingPenny,
-                'tax_penny'      => $taxPenny,
-                'discount_penny' => $discountPenny,
-                'total_penny'    => $totalPenny,
-
-                'ship_recipient_name'   => $shipping['recipient_name'],
-                'ship_house_number'     => $shipping['house_number'],
-                'ship_address_line_one' => $shipping['address_line_one'],
-                'ship_address_line_two' => $shipping['address_line_two'],
-                'ship_city'             => $shipping['city'],
-                'ship_county'           => $shipping['county'],
-                'ship_postcode'         => $shipping['postcode'],
-                'ship_country_code'     => $shipping['country_code'],
-                'ship_phone_number'     => $shipping['phone_number'],
-                'shipping_address_id'   => $shipping['address_id'] ?? null,
-
-                'bill_recipient_name'   => $billing['recipient_name'],
-                'bill_house_number'     => $billing['house_number'],
-                'bill_address_line_one' => $billing['address_line_one'],
-                'bill_address_line_two' => $billing['address_line_two'],
-                'bill_city'             => $billing['city'],
-                'bill_county'           => $billing['county'],
-                'bill_postcode'         => $billing['postcode'],
-                'bill_country_code'     => $billing['country_code'],
-                'bill_phone_number'     => $billing['phone_number'],
-                'billing_address_id'    => $billing['address_id'] ?? null,
-            ]);
-
-            foreach ($cart as $line) {
-                $qty = (int)($line['quantity'] ?? 1);
-
-                $unitPricePenny = isset($line['price_penny'])
-                    ? (int)$line['price_penny']
-                    : (int) round(((float)($line['price'] ?? 0)) * 100);
-
-                $sku = 'UNKNOWN';
-                if (!empty($line['variant_id'])) {
-                    $variant = \App\Models\ProductVariant::find($line['variant_id']);
-                    if ($variant) {
-                        $sku = $variant->sku;
-                    }
-                }
-
-                OrderItem::create([
-                    'order_id'         => $order->order_id,
-                    'variant_id'       => $line['variant_id'] ?? null,
-                    'sku'              => $sku,
-                    'title'            => $line['name'] ?? 'Untitled',
-                    'unit_price_penny' => $unitPricePenny,
-                    'quantity'         => $qty,
-                    'tax_rate'         => $vatRate, // 0.20 or 0.00
-                ]);
-            }
-            
-             $variantId = $line['variant_id'] ?? null;
-                if ($variantId) {
-                    $inventory = \App\Models\Inventory::where('variant_id', $variantId)->first();
-                    if ($inventory) {
-                        $inventory->available_stock = max(0, $inventory->available_stock - $qty);
-                        $inventory->save();
-                    }
-                }
-
-            if ($discount && $discountPenny > 0) {
-                DiscountRedemption::create([
-                    'discount_id' => $discount->discount_id,
-                    'user_id'     => $user->user_id,
-                    'order_id'    => $order->order_id,
-                    'redeemed_at' => now(),
-                ]);
-
-                DB::table('order_discounts')->insert([
-                    'order_id'             => $order->order_id,
-                    'discount_id'          => $discount->discount_id,
-                    'amount_applied_penny' => $discountPenny,
-                ]);
-            }
-
-            $providerMap = [
-                'visa' => 3,
-                'mastercard' => 4,
-                'amex' => 2,
-                'paypal' => 1,
-            ];
-
-            $providerKey = 'paypal';
-
-            if (($data['payment_method'] ?? 'card') === 'card') {
-                $brand = CardBrands::detect($data['card_number'] ?? '');
-                $providerKey = $brand; // visa/mastercard/amex
-            }
-
-            DB::table('payments')->insert([
-                'order_id'      => $order->order_id,
-                'provider_id'   => $providerMap[$data['payment_method']] ?? 3,
-                'provider_ref'  => 'SIM-' . strtoupper(Str::random(12)),
-                'amount_penny'  => $totalPenny,
-                'currency_code' => strtoupper($this->currency()),
-                'return_status' => 'Authorised',
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ]);
-
-            $request->session()->forget('cart');
-            $request->session()->forget('checkout_discount');
-            $request->session()->forget('gift_orders');
-        });
+        // Clear sessions
+        $request->session()->forget(['cart', 'checkout_discount', 'gift_orders']);
 
         return redirect()->route('account.orders')
             ->with('success', 'Your order has been placed successfully!');
     }
 
-    private function shippingPennyFor(string $countryCode, string $shippingMethod): int
-    {
-        $countryCode = strtoupper(trim($countryCode));
-        $shippingMethod = strtolower(trim($shippingMethod));
-
-        if ($countryCode === 'GB') {
-            return $shippingMethod === 'next_day' ? 1299 : 799;
-        }
-
-        return 1999;
-    }
+    // ─────────────────────────────────────────
+    // ADDRESS HELPERS
+    // ─────────────────────────────────────────
 
     private function resolveShippingAddress(array $data, $user): array
     {
@@ -572,6 +330,61 @@ class CheckoutController extends Controller
             'postcode'         => $data['ship_postcode'],
             'country_code'     => $data['ship_country_code'],
             'phone_number'     => $data['ship_phone_number'] ?? null,
+        ];
+    }
+
+    private function resolveGiftShipping(array $giftData): array
+    {
+        return [
+            'address_id'       => $giftData['address_id'] ?? null,
+            'recipient_name'   => $giftData['recipient_name'] ?? null,
+            'house_number'     => $giftData['house_number'] ?? null,
+            'address_line_one' => $giftData['address_line_one'] ?? null,
+            'address_line_two' => $giftData['address_line_two'] ?? null,
+            'city'             => $giftData['city'] ?? null,
+            'county'           => $giftData['county'] ?? null,
+            'postcode'         => $giftData['postcode'] ?? null,
+            'country_code'     => $giftData['country_code'] ?? null,
+            'phone_number'     => $giftData['phone_number'] ?? null,
+        ];
+    }
+
+    private function resolveBillingAddress(array $data, array $shipping, $user): array
+    {
+        if (!empty($data['billing_same'])) {
+            return $shipping;
+        }
+
+        if (!empty($data['billing_address_id'])) {
+            $addr = Address::where('address_id', $data['billing_address_id'])
+                ->where('user_id', $user->user_id)
+                ->firstOrFail();
+
+            return [
+                'address_id'       => $addr->address_id,
+                'recipient_name'   => $addr->recipient_name,
+                'house_number'     => $addr->house_number,
+                'address_line_one' => $addr->address_line_one,
+                'address_line_two' => $addr->address_line_two,
+                'city'             => $addr->city,
+                'county'           => $addr->county,
+                'postcode'         => $addr->postcode,
+                'country_code'     => $addr->country_code,
+                'phone_number'     => $addr->phone_number,
+            ];
+        }
+
+        return [
+            'address_id'       => null,
+            'recipient_name'   => $data['bill_recipient_name'],
+            'house_number'     => $data['bill_house_number'] ?? null,
+            'address_line_one' => $data['bill_address_line_one'],
+            'address_line_two' => $data['bill_address_line_two'] ?? null,
+            'city'             => $data['bill_city'],
+            'county'           => $data['bill_county'] ?? null,
+            'postcode'         => $data['bill_postcode'],
+            'country_code'     => $data['bill_country_code'],
+            'phone_number'     => $data['bill_phone_number'] ?? null,
         ];
     }
 }

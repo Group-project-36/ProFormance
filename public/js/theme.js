@@ -1,11 +1,3 @@
-/**
- * theme.js
- *
- * Dark/light mode — loads in <head> to prevent flash of wrong theme.
- * The IIFE at the top runs synchronously before paint.
- * The toggle listener attaches after DOMContentLoaded.
- */
-
 // ── Inline flash prevention (runs immediately) ──
 (function () {
     const saved = localStorage.getItem('theme');

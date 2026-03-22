@@ -10,11 +10,14 @@ class AccountAddressController extends Controller
 {
     public function index()
     {
+        $countries = \Illuminate\Support\Facades\DB::table('countries')
+        ->orderBy('country_name')
+        ->pluck('country_name', 'country_code');
         $addresses = Address::where('user_id', Auth::user()->user_id)
             ->orderByDesc('is_default_shipping_address')
             ->get();
 
-        return view('account.addresses', compact('addresses'));
+        return view('account.addresses', compact('addresses', 'countries'));
     }
 
     public function store(Request $request)

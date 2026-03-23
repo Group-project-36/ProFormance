@@ -2,43 +2,41 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
+use App\Models\LoginDetail;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
- */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    protected $model = User::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'first_name'         => $this->faker->firstName(),
+            'last_name'          => $this->faker->lastName(),
+            'country_phone_code' => 44,
+            'phone_number'       => $this->faker->numerify('07########'),
+            'user_role'          => 'customer',
+            'is_active'          => true,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function configure(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->afterCreating(function (User $user) {
+            LoginDetail::create([
+                'user_id'       => $user->user_id,
+                'email_address' => $this->faker->unique()->safeEmail(),
+                'password_hash' => Hash::make('TestPass!99'),
+                'password_salt' => '',
+            ]);
+        });
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn () => ['user_role' => 'admin']);
     }
 }

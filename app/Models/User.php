@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
     use Notifiable;
+    use HasFactory;
     public $timestamps = false;
     protected $table = 'users';
     protected $primaryKey = 'user_id';

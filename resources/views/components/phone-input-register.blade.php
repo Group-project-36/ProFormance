@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return new Promise((resolve) => {
             Promise.any([
                 fetch('https://ipapi.co/json/').then(res => res.json()).then(data => data.country_code.toLowerCase()),
-                fetch('https://ipinfo.io/json?token=2620d0b0460b0f').then(res => res.json()).then(data => data.country.toLowerCase()),
+                fetch('').then(res => res.json()).then(data => data.country.toLowerCase()),
                 fetch('http://ip-api.com/json/').then(res => res.json()).then(data => data.countryCode.toLowerCase())
             ])
             .then(resolve)
